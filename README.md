@@ -11,7 +11,7 @@
 [![Code size](https://img.shields.io/github/languages/code-size/gmpassos/async_events?logo=github&logoColor=white)](https://github.com/gmpassos/async_events)
 [![License](https://img.shields.io/github/license/gmpassos/async_events?logo=open-source-initiative&logoColor=green)](https://github.com/gmpassos/async_events/blob/master/LICENSE)
 
-A Map implementation with history and rollback support for entries, keys and values.
+A portable asynchronous event hub supporting multiple storage types
 
 ## Usage
 
@@ -20,44 +20,55 @@ Here's a simple usage example:
 ```dart
 import 'package:async_events/async_events.dart';
 
-void main() {
-  var m = MapHistory<int, String>();
+void main() async {
+  // The event storage:
+  var storage = AsyncEventStorageMemory('test');
 
-  m[1] = 'a';
-  m[2] = 'b';
-  m[3] = 'c';
+  // The event HUB:
+  var hub = AsyncEventHub('test', storage);
 
-  var ver3 = m.version;
+  // Get the channels:
+  var c1 = hub.channel('c1');
+  var c2 = hub.channel('c2');
 
-  print('Version: $ver3 >> $m');
+  // Subscribe to channels:
 
-  m[2] = 'B';
-  m.remove(3);
+  var sub1 = await c1.subscribe((event) {
+    print('C1 EVENT> $event');
+  });
 
-  var ver5 = m.version;
-  print('Version: $ver5 >> $m');
+  var sub2 = await c2.subscribe((event) {
+    print('C2 EVENT> $event');
+  });
 
-  print('Rollback to version: $ver3');
-  m.rollback(ver3);
+  // Submit somme events:
 
-  print('Version: ${m.version} >> $m');
+  var event1 = await c1.submit('t', {'name': 't1'});
+  var event2 = await c2.submit('t', {'name': 't2'});
+
+  // Subscribe later to the channel `c2`:
+  // - `fromBegin: true`: will receive all the previous events.
+  var sub2b = await c2.subscribe(fromBegin: true, (event) {
+    print('C2[b] EVENT> $event');
+  });
+
+  // Submit another event to `c2`:
+  var event3 = await c2.submit('t', {'name': 't3'});
+
+  // Cancel subscription to channel `c1`:
+  sub1.cancel();
 }
 ```
 
 Output:
 
 ```text
-Version: 3 >> {1: a, 2: b, 3: c}
-Version: 5 >> {1: a, 2: B}
-Rollback to version: 3
-Version: 3 >> {1: a, 2: b, 3: c}
+C1 EVENT> AsyncEvent[0#1@2022-08-14T16:15:10.526863Z]<t>{name: t1}
+C2 EVENT> AsyncEvent[0#1@2022-08-14T16:15:10.538934Z]<t>{name: t2}
+C2[b] EVENT> AsyncEvent[0#1@2022-08-14T16:15:10.538934Z]<t>{name: t2}
+C2 EVENT> AsyncEvent[0#2@2022-08-14T16:15:10.544065Z]<t>{name: t3}
+C2[b] EVENT> AsyncEvent[0#2@2022-08-14T16:15:10.544065Z]<t>{name: t3}
 ```
-
-## See Also
-
-[Dart Map][dart_map] documentation.
-
-[dart_map]: https://api.dart.dev/be/180360/dart-core/Map-class.html
 
 ## Features and bugs
 

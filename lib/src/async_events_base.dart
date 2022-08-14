@@ -1,503 +1,363 @@
-import 'package:collection/collection.dart';
+import 'package:async_events/async_events.dart';
+import 'package:async_extension/async_extension.dart';
+import 'package:logging/logging.dart' as logging;
 
-abstract class _MapEntry<K, V> {
+import 'async_events_storage.dart';
+
+final _log = logging.Logger('AsyncEvent');
+
+/// An [AsyncEvent] ID.
+class AsyncEventID implements Comparable<AsyncEventID> {
+  /// The epoch of this event.
+  final int epoch;
+
+  /// The serial version of this event in the [epoch].
+  final int serial;
+
+  const AsyncEventID(this.epoch, this.serial);
+
+  const AsyncEventID.zero() : this(0, 0);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncEventID &&
+          runtimeType == other.runtimeType &&
+          epoch == other.epoch &&
+          serial == other.serial;
+
+  @override
+  int get hashCode => epoch.hashCode ^ serial.hashCode;
+
+  @override
+  int compareTo(AsyncEventID other) {
+    var cmp = epoch.compareTo(other.epoch);
+
+    if (cmp == 0) {
+      cmp = serial.compareTo(other.serial);
+    }
+
+    return cmp;
+  }
+
+  factory AsyncEventID.fromJson(Map<String, dynamic> json) {
+    return AsyncEventID(json['epoch'], json['serial']);
+  }
+
+  Map<String, dynamic> toJson() => {
+        'epoch': epoch,
+        'serial': serial,
+      };
+
+  @override
+  String toString() {
+    return '$epoch#$serial';
+  }
+
+  bool operator <(AsyncEventID other) => compareTo(other) < 0;
+
+  bool operator <=(AsyncEventID other) => compareTo(other) <= 0;
+
+  bool operator >(AsyncEventID other) => compareTo(other) > 0;
+
+  bool operator >=(AsyncEventID other) => compareTo(other) >= 0;
+}
+
+/// An [AsyncEventChannel] event.
+class AsyncEvent implements Comparable<AsyncEvent> {
+  /// The ID of this event.
+  final AsyncEventID id;
+
+  /// The submit time of this event.
   final DateTime time;
-  final int version;
 
-  _MapEntry(this.version, this.time);
+  /// The type of this event.
+  final String type;
 
-  K get key;
+  /// The payload of this event.
+  final Map<String, dynamic> payload;
 
-  V get value;
+  AsyncEvent(this.id, this.time, this.type, this.payload);
 
-  bool get isDeleted;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncEvent && runtimeType == other.runtimeType && id == other.id;
 
-  MapEntry<K, V> get asMapEntry;
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  int compareTo(AsyncEvent other) => id.compareTo(other.id);
+
+  factory AsyncEvent.fromJson(Map<String, dynamic> json) {
+    return AsyncEvent(
+        AsyncEventID.fromJson(json),
+        DateTime.fromMillisecondsSinceEpoch(json['time']),
+        json['type'],
+        json['payload']);
+  }
+
+  Map<String, dynamic> toJson() => {
+        ...id.toJson(),
+        'time': time.toUtc().millisecondsSinceEpoch,
+        'type': type,
+        'payload': payload,
+      };
+
+  @override
+  String toString() {
+    return 'AsyncEvent[$id@${time.toIso8601String()}]<$type>$payload';
+  }
 }
 
-class _MapEntryDeleted<K, V> extends _MapEntry<K, V> {
-  _MapEntryDeleted(int version, DateTime time) : super(version, time);
+typedef AsyncEventMatcher = bool Function(AsyncEvent event);
 
-  @override
-  bool get isDeleted => true;
+/// An [AsyncEvent] hub.
+class AsyncEventHub {
+  /// The name of this event hub.
+  final String name;
 
-  @override
-  K get key => throw StateError("Deleted entry.");
+  /// The storage of [AsyncEvent].
+  final AsyncEventStorage storage;
 
-  @override
-  V get value => throw StateError("Deleted entry.");
+  AsyncEventHub(this.name, this.storage);
 
-  @override
-  MapEntry<K, V> get asMapEntry => throw StateError("Deleted entry.");
-}
+  final Map<String, AsyncEventChannel> _channels =
+      <String, AsyncEventChannel>{};
 
-class _MapEntryValue<K, V> extends _MapEntry<K, V> {
-  @override
-  final K key;
-  @override
-  final V value;
+  /// Returns an [AsyncEventChannel] with [name].
+  AsyncEventChannel channel(String name) =>
+      _channels.putIfAbsent(name, () => AsyncEventChannel(this, name));
 
-  _MapEntryValue(this.key, this.value, int version, DateTime time)
-      : super(version, time);
+  /// The current epoch of the [storage].
+  FutureOr<int> get epoch => storage.epoch;
 
-  @override
-  bool get isDeleted => false;
+  FutureOr<AsyncEvent?> _submit(
+      AsyncEventChannel channel, String type, Map<String, dynamic> payload) {
+    return storage
+        .nextEvent(channel.name, type, payload)
+        .resolveMapped((event) {
+      return storage.store(channel.name, event).resolveMapped((ok) {
+        if (!ok) {
+          _log.warning("Error storing event: $event");
+          return null;
+        }
 
-  @override
-  MapEntry<K, V> get asMapEntry => MapEntry(key, value);
-}
-
-/// A [Map] implementation with history support, including
-/// [rollback] operations.
-class MapHistory<K, V> implements Map<K, V> {
-  MapHistory() {
-    _setInitTime();
-  }
-
-  MapHistory.fromEntries(Iterable<MapEntry<K, V>> entries) {
-    _setInitTime();
-    addEntries(entries);
-  }
-
-  MapHistory.fromIterables(Iterable<K> keys, Iterable<V> values) {
-    _setInitTime();
-
-    var itrKeys = keys.iterator;
-    var itrValues = values.iterator;
-
-    while (itrKeys.moveNext() && itrValues.moveNext()) {
-      _put(itrKeys.current, itrValues.current);
-    }
-  }
-
-  MapHistory.from(Map map) {
-    _setInitTime();
-
-    if (map is Map<K, V>) {
-      addAll(map);
-    } else {
-      addAll(map.cast<K, V>());
-    }
-  }
-
-  MapHistory.of(Map<K, V> map) {
-    _setInitTime();
-
-    addAll(map);
-  }
-
-  int _size = 0;
-
-  @override
-  int get length => _size;
-
-  @override
-  bool get isEmpty => _size == 0;
-
-  @override
-  bool get isNotEmpty => _size > 0;
-
-  void _computeSize() {
-    _size = _entries.values
-        .map((values) => values.isEmpty || values.last.isDeleted ? 0 : 1)
-        .sum;
-  }
-
-  /// The initial [DateTime] of this instance. All operations are after this [DateTime].
-  late final DateTime initialTime;
-
-  void _setInitTime() {
-    initialTime = currentTime();
-  }
-
-  DateTime? _lastTime;
-
-  /// The last operation [DateTime].
-  late final DateTime lastTime = _lastTime ?? initialTime;
-
-  int _zeroVersion = 0;
-  int _version = 0;
-
-  /// The minimal [version] that a [rollback] can target.
-  /// See [consolidate].
-  int get baseVersion => _zeroVersion == _version ? _version : _zeroVersion + 1;
-
-  /// The current version of this instance.
-  /// Every operation increments the version number.
-  int get version => _version;
-
-  int _incrementVersion() {
-    return ++_version;
-  }
-
-  /// The current [DateTime] for new operations.
-  /// Default implementation: `DateTime.now()`.
-  DateTime currentTime() => DateTime.now();
-
-  _MapEntryValue<K, V> _nextEntry(K key, V value) {
-    var time = _lastTime = currentTime();
-    return _MapEntryValue<K, V>(key, value, _incrementVersion(), time);
-  }
-
-  _MapEntryDeleted<K, V> _nextEntryDeleted() {
-    var time = _lastTime = currentTime();
-    return _MapEntryDeleted(_incrementVersion(), time);
-  }
-
-  final Map<K, List<_MapEntry<K, V>>> _entries = <K, List<_MapEntry<K, V>>>{};
-
-  _MapEntry<K, V>? _put(K key, V value) {
-    var values = _entries.putIfAbsent(key, () => <_MapEntry<K, V>>[]);
-    var prev = values.lastOrNull;
-
-    values.add(_nextEntry(key, value));
-
-    if (prev == null || prev.isDeleted) {
-      _size++;
-      return null;
-    } else {
-      return prev;
-    }
-  }
-
-  _MapEntry<K, V> _putIfAbsent(K key, V Function() ifAbsent) {
-    var values = _entries.putIfAbsent(key, () => <_MapEntry<K, V>>[]);
-
-    var prev = values.lastOrNull;
-
-    if (prev == null || prev.isDeleted) {
-      _size++;
-      var value = ifAbsent();
-      var entry = _nextEntry(key, value);
-      values.add(entry);
-      return entry;
-    } else {
-      return prev;
-    }
-  }
-
-  _MapEntry<K, V> _update(K key, V Function(V value) update,
-      {V Function()? ifAbsent}) {
-    var values = _entries.putIfAbsent(key, () => <_MapEntry<K, V>>[]);
-
-    var prev = values.lastOrNull;
-
-    if (prev == null || prev.isDeleted) {
-      if (ifAbsent == null) {
-        throw ArgumentError(
-            "No previous value to update for key `$key`: `ifAbsent` parameter must be provided.");
-      }
-      _size++;
-      var value = ifAbsent();
-      var entry = _nextEntry(key, value);
-      values.add(entry);
-      return entry;
-    } else {
-      var value = update(prev.value);
-      var entry = _nextEntry(key, value);
-      values.add(entry);
-      return entry;
-    }
-  }
-
-  _MapEntry<K, V>? _getLast(Object? key) {
-    var prev = _entries[key]?.lastOrNull;
-    return prev == null || prev.isDeleted ? null : prev;
-  }
-
-  @override
-  V? operator [](Object? key) => _getLast(key)?.value;
-
-  @override
-  void operator []=(K key, V value) => _put(key, value);
-
-  @override
-  Iterable<MapEntry<K, V>> get entries => _entries.entries.where((e) {
-        var values = e.value;
-        return values.isNotEmpty && !values.last.isDeleted;
-      }).map((e) => MapEntry(e.key, e.value.last.value));
-
-  @override
-  Iterable<K> get keys => _entries.entries.where((e) {
-        var values = e.value;
-        return values.isNotEmpty && !values.last.isDeleted;
-      }).map((e) => e.key);
-
-  @override
-  Iterable<V> get values => _entries.values.where((value) {
-        var prev = value.lastOrNull;
-        return prev != null && !prev.isDeleted;
-      }).map((value) => value.last.value);
-
-  @override
-  void addEntries(Iterable<MapEntry<K, V>> newEntries) {
-    for (var e in newEntries) {
-      _put(e.key, e.value);
-    }
-  }
-
-  @override
-  void addAll(Map<K, V> other) => addEntries(other.entries);
-
-  @override
-  V update(K key, V Function(V value) update, {V Function()? ifAbsent}) =>
-      _update(key, update, ifAbsent: ifAbsent).value;
-
-  @override
-  V putIfAbsent(K key, V Function() ifAbsent) =>
-      _putIfAbsent(key, ifAbsent).value;
-
-  @override
-  void updateAll(V Function(K key, V value) update) {
-    _entries.updateAll((key, values) {
-      var prev = values.lastOrNull;
-      if (prev != null && !prev.isDeleted) {
-        var newValue = update(key, prev.value);
-        values.add(_nextEntry(key, newValue));
-      }
-      return values;
+        channel._processEvent(event);
+        return event;
+      });
     });
   }
+}
 
-  @override
-  V? remove(Object? key) {
-    var values = _entries[key];
-    if (values == null || values.isEmpty) {
-      return null;
-    }
+typedef AsyncEventListener = FutureOr<dynamic> Function(AsyncEvent event);
 
-    var prev = values.last;
-    if (prev.isDeleted) {
-      return null;
-    }
+mixin WithLastEventID {
+  AsyncEventID? _lastEventID;
 
-    --_size;
-    values.add(_nextEntryDeleted());
-    return prev.value;
+  bool isAfterLastEventID(AsyncEventID? eventID) {
+    if (eventID == null) return false;
+
+    var last = _lastEventID;
+
+    var cmp = last == null ? -1 : last.compareTo(eventID);
+    return cmp <= 0;
   }
 
-  @override
-  void removeWhere(bool Function(K key, V value) test) {
-    for (var e in _entries.entries) {
-      var values = e.value;
-      if (values.isEmpty) continue;
+  AsyncEventID? get lastEventID => _lastEventID;
 
-      var prev = values.last;
-      if (prev.isDeleted) continue;
+  set lastEventID(AsyncEventID? value) {
+    if (value == null) return;
+    var last = _lastEventID;
 
-      var key = e.key;
-      var del = test(key, prev.value);
-
-      if (del) {
-        --_size;
-        values.add(_nextEntryDeleted());
-      }
+    var cmp = last == null ? -1 : last.compareTo(value);
+    if (cmp <= 0) {
+      _lastEventID = value;
     }
   }
+}
 
-  /// Clears all the entries.
-  /// - [rollback] is still possible to rever this operation.
-  @override
-  void clear() {
-    for (var values in _entries.values) {
-      if (values.isEmpty) continue;
+/// An [AsyncEventHub] channel.
+class AsyncEventChannel with WithLastEventID {
+  /// The event hub of this channel.
+  final AsyncEventHub hub;
 
-      var prev = values.last;
-      if (prev.isDeleted) continue;
+  /// This channel name.
+  final String name;
 
-      values.add(_nextEntryDeleted());
-    }
+  AsyncEventChannel(this.hub, this.name);
 
-    _size = 0;
-  }
+  final List<AsyncEventSubscription> _subscriptions =
+      <AsyncEventSubscription>[];
 
-  /// Returns the [MapEntry] operation for the [targetVersion].
-  MapEntry<K, V>? findOperationEntryByVersion(int targetVersion) {
-    for (var values in _entries.values) {
-      for (var e in values) {
-        if (e.version == targetVersion) {
-          return e.isDeleted ? null : e.asMapEntry;
-        }
+  /// Subscribe to events of this channel.
+  FutureOr<AsyncEventSubscription> subscribe(AsyncEventListener listener,
+      {AsyncEventID? fromID,
+      bool fromBegin = false,
+      bool fromEpochBegin = false}) {
+    if (fromID == null) {
+      if (fromBegin) {
+        fromID = AsyncEventID.zero();
+      } else if (fromEpochBegin) {
+        return hub.epoch.resolveMapped((epoch) {
+          return _subscribeImpl(listener, AsyncEventID(epoch, 0));
+        });
       }
     }
 
-    return null;
+    return _subscribeImpl(listener, fromID);
   }
 
-  /// Returns the version operation for the [targetTime],
-  /// or the nearest version for [targetTime].
-  int findOperationVersionByTime(DateTime targetTime) {
-    if (targetTime.compareTo(initialTime) < _zeroVersion) {
-      return _zeroVersion;
+  FutureOr<AsyncEventSubscription> _subscribeImpl(
+      AsyncEventListener listener, AsyncEventID? fromID) {
+    var subscription = AsyncEventSubscription(this, listener, fromID: fromID);
+    _subscriptions.add(subscription);
+
+    subscription._doSync();
+
+    return subscription.ensureSynchronized().resolveWithValue(subscription);
+  }
+
+  /// Cancels a [subscription].
+  bool cancel(AsyncEventSubscription subscription) =>
+      _subscriptions.remove(subscription);
+
+  /// Returns `true` if [subscription] is subscribed to this channel.
+  bool isSubscribed(AsyncEventSubscription subscription) =>
+      _subscriptions.contains(subscription);
+
+  /// Submits and broadcast an event to this channel.
+  FutureOr<AsyncEvent?> submit(String type, Map<String, dynamic> payload) =>
+      hub._submit(this, type, payload);
+
+  void _processEvent(AsyncEvent event) {
+    _lastEventID = event.id;
+
+    for (var e in _subscriptions) {
+      e._processEvent(event);
+    }
+  }
+
+  @override
+  String toString() {
+    return 'AsyncEventChannel[$name]';
+  }
+}
+
+/// An [AsyncEventChannel] event subscription.
+class AsyncEventSubscription with WithLastEventID {
+  /// The [AsyncEventChannel] of this subscription.
+  final AsyncEventChannel channel;
+
+  /// The listener [Function] of events of this subscription.
+  final AsyncEventListener listener;
+
+  /// If provided, will receive events starting [fromID].
+  final AsyncEventID? fromID;
+
+  AsyncEventSubscription(this.channel, this.listener, {this.fromID});
+
+  /// Cancels this subscriptiont to [channel].
+  void cancel() => channel.cancel(this);
+
+  /// Returns `true` if this [AsyncEventSubscription] instance is
+  /// subscribed to [channel].
+  bool get isSubscribed => channel.isSubscribed(this);
+
+  List<AsyncEvent>? _unflushedEvents;
+
+  FutureOr<int> _flushEvents() {
+    var unflushedEvents = _unflushedEvents;
+    if (unflushedEvents == null || unflushedEvents.isEmpty) {
+      return 0;
     }
 
-    _MapEntry<K, V>? best;
+    unflushedEvents.sort();
 
-    for (var values in _entries.values) {
-      for (var e in values) {
-        var cmp = e.time.compareTo(targetTime);
-        if (cmp <= 0) {
-          if (best == null) {
-            best = e;
-          } else {
-            var bestTimeCmp = best.time.compareTo(e.time);
-            if (bestTimeCmp < 0 ||
-                (bestTimeCmp == 0 && best.version < e.version)) {
-              best = e;
-            }
-          }
-        }
+    AsyncEvent? prev;
+
+    var asyncLoop =
+        AsyncLoop<int>(0, (i) => i < unflushedEvents.length, (i) => i + 1, (i) {
+      var e = unflushedEvents[i];
+      if (prev?.id == e.id) {
+        return true;
       }
-    }
 
-    return best?.version ?? _zeroVersion;
-  }
-
-  /// Rollbacks to the operation of [targetVersion].
-  MapEntry<K, V>? rollback(int targetVersion) {
-    if (targetVersion <= _zeroVersion) {
-      _clearAll();
-      return null;
-    } else if (targetVersion == version) {
-      return findOperationEntryByVersion(targetVersion);
-    } else if (targetVersion > version) {
-      return null;
-    }
-
-    _MapEntry<K, V>? targetEntry;
-
-    for (var values in _entries.values) {
-      values.removeWhere((e) {
-        var ver = e.version;
-
-        if (ver < targetVersion) {
-          if (targetEntry == null || targetEntry!.version < ver) {
-            targetEntry = e;
-          }
-          return false;
-        } else if (ver == targetVersion) {
-          targetEntry = e;
-          return false;
-        } else {
-          return true;
-        }
+      return _processEventImpl(e).resolveMapped((_) {
+        prev = e;
+        return true;
       });
+    });
 
-      if (values.length == 1 && values.first.isDeleted) {
-        values.clear();
-      }
+    return asyncLoop.run();
+  }
+
+  FutureOr<bool> _processEvent(AsyncEvent event) {
+    if (!_sync) {
+      var unflushedEvents = _unflushedEvents ??= <AsyncEvent>[];
+      unflushedEvents.add(event);
+      return false;
     }
 
-    _entries.removeWhere((key, values) => values.isEmpty);
-
-    _computeSize();
-
-    var foundEntry = targetEntry;
-
-    if (foundEntry != null) {
-      _version = foundEntry.version;
-      return foundEntry.isDeleted ? null : foundEntry.asMapEntry;
-    } else {
-      _clearAll();
-      return null;
-    }
+    return _processEventImpl(event);
   }
 
-  void _clearAll() {
-    _entries.clear();
-    _size = 0;
-    _version = _zeroVersion;
-    _lastTime = null;
-  }
-
-  /// Remove all entries and all history entries.
-  void purgeAll() {
-    _clearAll();
-  }
-
-  /// Removes all history prior to [targetBaseVersion] and returns the consolidated [baseVersion].
-  /// After the operation it won't allow a [rollback] to a version prior to [targetBaseVersion].
-  int consolidate(int targetBaseVersion) {
-    if (targetBaseVersion <= _zeroVersion) {
-      return baseVersion;
-    } else if (targetBaseVersion > version) {
-      var ver = version;
-      _clearAll();
-      _zeroVersion = _version = ver;
-      return baseVersion;
+  FutureOr<bool> _processEventImpl(AsyncEvent event) {
+    if (!isAfterLastEventID(event.id)) {
+      return false;
     }
 
-    var minimalVersion = version;
+    lastEventID = event.id;
 
-    for (var values in _entries.values) {
-      while (values.length > 2 && values.first.version < targetBaseVersion) {
-        values.removeAt(0);
-      }
+    return asyncTry<Object?>(() => listener(event),
+        then: (_) => true,
+        onError: (e, s) {
+          _log.severe("$channel Error processing event: $event", e, s);
+          return false;
+        }).resolveMapped((val) => val is bool ? val : false);
+  }
 
-      if (values.length == 2 && values.last.version < targetBaseVersion) {
-        values.removeAt(0);
-      }
+  bool _sync = false;
 
-      if (values.length == 1 && values.first.isDeleted) {
-        values.clear();
-      } else {
-        assert(values.isNotEmpty);
-
-        var ver = values.first.version;
-        if (ver < minimalVersion) {
-          minimalVersion = ver;
-        }
-      }
+  void _doSync() {
+    var fromID = this.fromID;
+    if (fromID == null) {
+      _finishSync();
+      return;
     }
 
-    _entries.removeWhere((key, values) => values.isEmpty);
-
-    _computeSize();
-
-    _zeroVersion = minimalVersion - 1;
-
-    return baseVersion;
+    channel.hub.storage
+        .fetch(channel.name, fromID)
+        .resolveMapped((sel) => _onSyncEvents(sel));
   }
 
-  @override
-  bool containsKey(Object? key) {
-    var prev = _entries[key];
-    return prev != null && prev.isNotEmpty && !prev.last.isDeleted;
+  void _onSyncEvents(List<AsyncEvent> syncEvents) {
+    syncEvents.sort();
+
+    var unflushedEvents = _unflushedEvents ??= <AsyncEvent>[];
+    unflushedEvents.addAll(syncEvents);
+
+    _flushEvents().resolveWith(_finishSync);
   }
 
-  @override
-  bool containsValue(Object? value) => _entries.values.any((values) {
-        if (values.isEmpty) return false;
-        var prev = values.last;
-        if (prev.isDeleted) return false;
-        return prev.value == value;
-      });
+  void _finishSync() {
+    var syncWaiting = _syncWaiting;
+    _sync = true;
 
-  @override
-  void forEach(void Function(K key, V value) action) {
-    for (var e in _entries.entries) {
-      var values = e.value;
-      if (values.isEmpty) continue;
-      var prev = values.last;
-      if (prev.isDeleted) continue;
-
-      action(e.key, prev.value);
+    if (syncWaiting != null) {
+      syncWaiting.complete(true);
+      _syncWaiting = null;
     }
   }
 
-  @override
-  Map<K2, V2> map<K2, V2>(MapEntry<K2, V2> Function(K key, V value) convert) =>
-      MapHistory<K2, V2>.fromEntries(
-          entries.map<MapEntry<K2, V2>>((e) => convert(e.key, e.value)));
+  Completer<bool>? _syncWaiting;
 
-  @override
-  Map<RK, RV> cast<RK, RV>() =>
-      MapHistory<RK, RV>.fromEntries(entries.map<MapEntry<RK, RV>>(
-          (e) => MapEntry<RK, RV>(e.key as RK, e.value as RV)));
+  /// Ensures that this subscription is synchronized with the channel.
+  FutureOr<bool> ensureSynchronized() {
+    if (_sync) return true;
 
-  /// Converts this instance to a standard [Map] instance.
-  Map<K, V> toMap() => Map<K, V>.fromEntries(entries);
-
-  @override
-  String toString() => toMap().toString();
+    var syncWaiting = _syncWaiting ??= Completer<bool>();
+    return syncWaiting.future;
+  }
 }
