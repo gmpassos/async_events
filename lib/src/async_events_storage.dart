@@ -4,6 +4,8 @@ import 'package:async_events/async_events.dart';
 import 'package:async_extension/async_extension.dart';
 import 'package:logging/logging.dart' as logging;
 
+final _log = logging.Logger('AsyncEventStorage');
+
 abstract class AsyncEventStorage {
   final String name;
 
@@ -21,7 +23,7 @@ abstract class AsyncEventStorage {
 
   final Map<String, AsyncEventID> _channelsMaxIDs = <String, AsyncEventID>{};
 
-  FutureOr<AsyncEventID> nextEventID(String channelName) {
+  FutureOr<AsyncEventID> _nextEventID(String channelName) {
     return lastID(channelName).resolveOther<AsyncEventID, int>(epoch,
         (lastEventID, epoch) {
       int serial;
@@ -62,11 +64,62 @@ abstract class AsyncEventStorage {
     });
   }
 
-  FutureOr<AsyncEvent> nextEvent(
+  FutureOr<AsyncEvent> _nextEvent(
       String channelName, String type, Map<String, dynamic> payload) {
-    return nextEventID(channelName).resolveMapped((id) {
+    return _nextEventID(channelName).resolveMapped((id) {
       return AsyncEvent(id, currentTime, type, payload);
     });
+  }
+
+  FutureOr<AsyncEvent?> newEvent(
+      String channelName, String type, Map<String, dynamic> payload) {
+    return _nextEvent(channelName, type, payload).resolveMapped((event) {
+      return store(channelName, event).resolveMapped((ok) {
+        if (!ok) {
+          _log.warning("Error storing event: $event");
+          return null;
+        }
+        _notifyNewEvent(channelName, event);
+        return event;
+      });
+    });
+  }
+
+  final Map<String, List<AsyncEventListener>> _eventListeners =
+      <String, List<AsyncEventListener>>{};
+
+  void listenEvents(String channelName, AsyncEventListener listener) {
+    var list =
+        _eventListeners.putIfAbsent(channelName, () => <AsyncEventListener>[]);
+    list.add(listener);
+  }
+
+  void _notifyNewEvent(String channelName, AsyncEvent event) {
+    var list = _eventListeners[channelName];
+    if (list == null) return;
+
+    for (var e in list) {
+      try {
+        e(event);
+      } catch (e, s) {
+        _log.severe("Error notifying event: $event", e, s);
+      }
+    }
+  }
+
+  void _notifyNewEvents(String channelName, Iterable<AsyncEvent> events) {
+    var list = _eventListeners[channelName];
+    if (list == null) return;
+
+    for (var event in events) {
+      for (var e in list) {
+        try {
+          e(event);
+        } catch (e, s) {
+          _log.severe("Error notifying event: $event", e, s);
+        }
+      }
+    }
   }
 
   FutureOr<bool> store(String channelName, AsyncEvent event);
@@ -79,10 +132,82 @@ abstract class AsyncEventStorage {
       last(channelName).resolveMapped((event) => event?.id);
 
   FutureOr<int> purge(int untilEpoch);
+
+  FutureOr<bool> pull(String channelName, AsyncEventID? fromID);
+}
+
+/// Wraps [AsyncEventStorage]'s calls returning JSON values.
+/// Useful to implement a [storage] server.
+mixin AsyncEventStorageAsJSON {
+  /// The [AsyncEventStorage] to wrap.
+  AsyncEventStorage get storage;
+
+  /// Alias to [storage.epoch].
+  FutureOr<int> get epoch => storage.epoch;
+
+  /// Alias to [storage.newEvent].
+  FutureOr<Map<String, dynamic>?> newEvent(
+          String channelName, String type, Map<String, dynamic> payload) =>
+      storage
+          .newEvent(channelName, type, payload)
+          .resolveMapped((event) => event?.toJson());
+
+  /// Alias to [storage.fetch].
+  FutureOr<List<Map<String, dynamic>>> fetch(
+      String channelName, AsyncEventID fromID) {
+    return storage
+        .fetch(channelName, fromID)
+        .resolveMapped((l) => l.map((e) => e.toJson()).toList());
+  }
+
+  /// Alias to [storage.lastID].
+  FutureOr<Map<String, dynamic>?> lastID(String channelName) =>
+      storage.lastID(channelName).resolveMapped((id) => id?.toJson());
+
+  /// Alias to [storage.last].
+  FutureOr<Map<String, dynamic>?> last(String channelName) =>
+      storage.last(channelName).resolveMapped((event) => event?.toJson());
+
+  /// Alias to [storage.purge].
+  FutureOr<int> purge(int untilEpoch) => storage.purge(untilEpoch);
+}
+
+/// Wraps an [AsyncEventStorageAsJSON] instance converting JSON results int objects.
+/// Useful to implement a [storage] client.
+mixin AsyncEventStorageFromJSON {
+  AsyncEventStorageAsJSON get storageAsJSON;
+
+  /// Calls [storageAsJSON.epoch].
+  FutureOr<int> get epoch => storageAsJSON.epoch;
+
+  /// Calls [storageAsJSON.newEvent].
+  FutureOr<AsyncEvent?> newEvent(
+          String channelName, String type, Map<String, dynamic> payload) =>
+      storageAsJSON.newEvent(channelName, type, payload).resolveMapped(
+          (json) => json == null ? null : AsyncEvent.fromJson(json));
+
+  /// Calls [storageAsJSON.fetch].
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID) =>
+      storageAsJSON.fetch(channelName, fromID).resolveMapped(
+          (l) => l.map((json) => AsyncEvent.fromJson(json)).toList());
+
+  /// Calls [storageAsJSON.lastID].
+  FutureOr<AsyncEventID?> lastID(String channelName) =>
+      storageAsJSON.lastID(channelName).resolveMapped(
+          (json) => json == null ? null : AsyncEventID.fromJson(json));
+
+  /// Calls [storageAsJSON.last].
+  FutureOr<AsyncEvent?> last(String channelName) => storageAsJSON
+      .last(channelName)
+      .resolveMapped((json) => json == null ? null : AsyncEvent.fromJson(json));
+
+  /// Calls [storageAsJSON.purge].
+  FutureOr<int> purge(int untilEpoch) => storageAsJSON.purge(untilEpoch);
 }
 
 final _logMemory = logging.Logger('AsyncEventStorageMemory');
 
+/// An in-memory [AsyncEventStorage].
 class AsyncEventStorageMemory extends AsyncEventStorage {
   AsyncEventStorageMemory(super.name, {super.epochPeriod});
 
@@ -92,7 +217,7 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   final DateTime initTime = DateTime.now();
 
   @override
-  FutureOr<int> get epoch {
+  int get epoch {
     var elapsedTime = DateTime.now().difference(initTime);
     var epoch = elapsedTime.inSeconds ~/ epochPeriod.inSeconds;
     return epoch;
@@ -122,7 +247,7 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   }
 
   @override
-  FutureOr<AsyncEvent?> last(String channelName) {
+  AsyncEvent? last(String channelName) {
     var list = _channelsEvents[channelName];
     if (list == null || list.isEmpty) return null;
 
@@ -152,4 +277,83 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
 
     return totalDel;
   }
+
+  @override
+  FutureOr<bool> pull(String channelName, AsyncEventID? fromID) {
+    fromID ??= AsyncEventID.zero();
+
+    return fetch(channelName, fromID).resolveMapped((events) {
+      _notifyNewEvents(channelName, events);
+      return true;
+    });
+  }
+}
+
+/// A remote [AsyncEventStorage].
+class AsyncEventStorageRemote extends AsyncEventStorage {
+  /// The client that access the real storage.
+  final AsyncEventStorageClient client;
+
+  AsyncEventStorageRemote(super.name, this.client);
+
+  @override
+  FutureOr<int> get epoch => client.epoch;
+
+  @override
+  FutureOr<AsyncEvent?> newEvent(
+          String channelName, String type, Map<String, dynamic> payload) =>
+      client.newEvent(channelName, type, payload);
+
+  @override
+  @Deprecated(
+      "Should not be called in a remote storage instance. Use `newEvent`")
+  FutureOr<bool> store(String channelName, AsyncEvent event) {
+    throw UnsupportedError("Not supported for remote storage. Use `newEvent`");
+  }
+
+  @override
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID) =>
+      client.fetch(channelName, fromID);
+
+  @override
+  FutureOr<AsyncEventID?> lastID(String channelName) =>
+      client.lastID(channelName);
+
+  @override
+  FutureOr<AsyncEvent?> last(String channelName) => client.last(channelName);
+
+  @override
+  FutureOr<int> purge(int untilEpoch) => client.purge(untilEpoch);
+
+  @override
+  FutureOr<bool> pull(String channelName, AsyncEventID? fromID) {
+    fromID ??= AsyncEventID.zero();
+
+    return fetch(channelName, fromID).resolveMapped((events) {
+      _notifyNewEvents(channelName, events);
+      return true;
+    });
+  }
+}
+
+/// Interface for an [AsyncEventStorageRemote] client.
+abstract class AsyncEventStorageClient {
+  /// Calls [AsyncEventStorage.epoch].
+  FutureOr<int> get epoch;
+
+  /// Calls [AsyncEventStorage.newEvent].
+  FutureOr<AsyncEvent?> newEvent(
+      String channelName, String type, Map<String, dynamic> payload);
+
+  /// Calls [AsyncEventStorage.fetch].
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID);
+
+  /// Calls [AsyncEventStorage.lastID].
+  FutureOr<AsyncEventID?> lastID(String channelName);
+
+  /// Calls [AsyncEventStorage.last].
+  FutureOr<AsyncEvent?> last(String channelName);
+
+  /// Calls [AsyncEventStorage.purge].
+  FutureOr<int> purge(int untilEpoch);
 }
