@@ -1,3 +1,8 @@
+## 1.0.3
+
+- `AsyncEvent`:
+  - Field `channelName`: `@JsonFieldAlias('channel')`
+
 ## 1.0.2
 
 - `@EnableReflection()`: `AsyncEventID`, `AsyncEvent`.

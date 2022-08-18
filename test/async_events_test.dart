@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:async_events/async_events.dart';
 import 'package:logging/logging.dart' as logging;
+import 'package:reflection_factory/reflection_factory.dart';
 import 'package:test/test.dart';
 
 const _epochPeriod = Duration(seconds: 2);
@@ -14,6 +13,20 @@ void main() {
   final log = logging.Logger('test');
 
   group('AsyncEvent', () {
+    test('json', () async {
+      var now = DateTime.now();
+
+      var event1 = AsyncEvent('foo', AsyncEventID(1, 2), now, 'test', {'a': 1});
+      expect(event1.toJson(), equals(event1.toJson()));
+
+      expect(AsyncEvent.fromJson(event1.toJson()), equals(event1));
+
+      var classReflection =
+          ReflectionFactory().getRegisterClassReflection<AsyncEvent>()!;
+
+      expect(classReflection.fromJson(event1.toJson()), equals(event1));
+    });
+
     test('basic', () async {
       var storage =
           AsyncEventStorageMemory('test-memory', epochPeriod: _epochPeriod);

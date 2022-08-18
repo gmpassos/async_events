@@ -146,6 +146,7 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   }
 
   /// The [AsyncEventChannel] name of this event.
+  @JsonFieldAlias('channel')
   final String channelName;
 
   /// The ID of this event.

@@ -184,7 +184,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
           obj,
           false,
           true,
-          null,
+          [JsonFieldAlias('channel')],
         );
       case 'id':
         return FieldReflection<AsyncEvent, T>(
