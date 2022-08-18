@@ -1,3 +1,15 @@
+## 1.0.2
+
+- `@EnableReflection()`: `AsyncEventID`, `AsyncEvent`.
+- `AsyncEvent`:
+  - `toJson`: `id` is a `String` now.
+- Added `AsyncEventPulling`.
+- `AsyncEventChannel`:
+  - Improved event order sync. 
+- reflection_factory: ^1.2.6
+- build_runner: ^2.1.5
+- build_verify: ^3.0.0
+
 ## 1.0.1
 
 - Added `AsyncEventSubscriptionGroup`:

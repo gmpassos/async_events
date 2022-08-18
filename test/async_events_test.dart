@@ -4,6 +4,8 @@ import 'package:async_events/async_events.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:test/test.dart';
 
+const _epochPeriod = Duration(seconds: 2);
+
 void main() {
   logging.Logger.root.level = logging.Level.ALL;
   logging.Logger.root.onRecord
@@ -13,14 +15,16 @@ void main() {
 
   group('AsyncEvent', () {
     test('basic', () async {
-      var storage = AsyncEventStorageMemory('test');
+      var storage =
+          AsyncEventStorageMemory('test-memory', epochPeriod: _epochPeriod);
       var hub = AsyncEventHub('test', storage);
 
       await _doTestBasic(hub, log, storage);
     });
 
     test('remote', () async {
-      var server = _MyAsyncEventStorageServer('test');
+      var server = _MyAsyncEventStorageServer(
+          AsyncEventStorageMemory('test-server', epochPeriod: _epochPeriod));
       var client = _MyAsyncEventStorageClient(server);
 
       var storage = AsyncEventStorageRemote('test', client);
@@ -33,6 +37,10 @@ void main() {
 
 Future<void> _doTestBasic(
     AsyncEventHub hub, logging.Logger log, AsyncEventStorage storage) async {
+  log.info('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
+  log.info("Hub: $hub");
+  log.info("Storage: $storage");
+
   var c1 = hub.channel('c1');
   var c2 = hub.channel('c2');
 
@@ -49,14 +57,14 @@ Future<void> _doTestBasic(
     log.info('C2>> $e');
   });
 
-  var event1 = await c1.submit('t', {'name': 't1'});
-  var event2 = await c2.submit('t', {'name': 't2'});
+  var eventC1_1 = await c1.submit('t', {'name': 't1'});
+  var eventC2_1 = await c2.submit('t', {'name': 't2'});
 
   await sub1.pull();
   await sub2.pull();
 
-  expect(c1Events.map((e) => e.toJson()), [event1!.toJson()]);
-  expect(c2Events.map((e) => e.toJson()), [event2!.toJson()]);
+  expect(c1Events.map((e) => e.toJson()), [eventC1_1!.toJson()]);
+  expect(c2Events.map((e) => e.toJson()), [eventC2_1!.toJson()]);
 
   var c2bEvents = <AsyncEvent>[];
 
@@ -65,15 +73,57 @@ Future<void> _doTestBasic(
     log.info('C2/b>> $e');
   });
 
-  var event3 = await c2.submit('t', {'name': 't3'});
+  var eventC2_2 = await c2.submit('t', {'name': 't3'});
 
   var sub2b = await sub2bAsync;
 
   await sub2b.pull();
 
-  expect(c2bEvents.map((e) => e.toJson()), [event2.toJson(), event3!.toJson()]);
+  expect(c2bEvents.map((e) => e.toJson()),
+      [eventC2_1.toJson(), eventC2_2!.toJson()]);
 
-  expect(c2Events.map((e) => e.toJson()), [event2.toJson(), event3.toJson()]);
+  expect(c2Events.map((e) => e.toJson()),
+      [eventC2_1.toJson(), eventC2_2.toJson()]);
+
+  var eventPulling = AsyncEventPulling(c1, period: Duration(milliseconds: 200));
+
+  expect(eventPulling.period.inMilliseconds, equals(200));
+  expect(eventPulling.minInterval.inMilliseconds, equals(20));
+  expect(eventPulling.isStarted, isFalse);
+  expect(eventPulling.isStopped, isFalse);
+  expect(eventPulling.isScheduled, isFalse);
+
+  eventPulling.start();
+  expect(eventPulling.isStarted, isTrue);
+  expect(eventPulling.isStopped, isFalse);
+
+  var eventC1_2 = await c1.submit('t', {'name': 't4'});
+
+  log.info("waitPulling 1> $eventPulling");
+  expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(c1Events.map((e) => e.toJson()),
+      [eventC1_1.toJson(), eventC1_2!.toJson()]);
+
+  expect(await hub.epoch, equals(0));
+
+  await _sleep(log, 2100);
+
+  expect(await hub.epoch, equals(1));
+
+  var eventC1_3 = await c1.submit('t', {'name': 't5'});
+
+  log.info("waitPulling 2> $eventPulling");
+  expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(c1Events.map((e) => e.toJson()),
+      [eventC1_1.toJson(), eventC1_2.toJson(), eventC1_3!.toJson()]);
+
+  eventPulling.stop();
+  await _sleep(log, 300);
+
+  expect(eventPulling.isStarted, isFalse);
+  expect(eventPulling.isStopped, isTrue);
 
   expect(sub1.isSubscribed, isTrue);
   sub1.cancel();
@@ -87,8 +137,17 @@ Future<void> _doTestBasic(
   sub2b.cancel();
   expect(sub1.isSubscribed, isFalse);
 
-  expect(await storage.last('c1'), event1);
-  expect(await storage.last('c2'), event3);
+  expect(await storage.last('c1'), eventC1_3);
+  expect(await storage.last('c2'), eventC2_2);
+
+  log.info("Hub: $hub");
+  log.info("Storage: $storage");
+  log.info('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>');
+}
+
+Future<dynamic> _sleep(logging.Logger log, int milliseconds) {
+  log.info("Sleep: ${milliseconds}ms ...");
+  return Future.delayed(Duration(milliseconds: milliseconds));
 }
 
 class _MyAsyncEventStorageClient extends AsyncEventStorageClient
@@ -99,14 +158,18 @@ class _MyAsyncEventStorageClient extends AsyncEventStorageClient
   AsyncEventStorageAsJSON get storageAsJSON => server;
 
   _MyAsyncEventStorageClient(this.server);
+
+  @override
+  String toString() {
+    return '_MyAsyncEventStorageClient@$server';
+  }
 }
 
 class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
   @override
   final AsyncEventStorage storage;
 
-  _MyAsyncEventStorageServer(String name)
-      : storage = AsyncEventStorageMemory(name);
+  _MyAsyncEventStorageServer(this.storage);
 
   @override
   Future<int> get epoch => super.epoch.asFuture;
@@ -131,6 +194,11 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 
   @override
   Future<int> purge(int untilEpoch) => super.purge(untilEpoch).asFuture;
+
+  @override
+  String toString() {
+    return '_MyAsyncEventStorageServer@$storage';
+  }
 }
 
 extension _FutureOrExtension<T> on FutureOr<T> {

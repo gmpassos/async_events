@@ -1,14 +1,31 @@
+import 'dart:math' as math;
+
 import 'package:async_events/async_events.dart';
 import 'package:async_extension/async_extension.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart' as logging;
+import 'package:reflection_factory/reflection_factory.dart';
 
 import 'async_events_storage.dart';
+
+part 'reflection/async_events_base.g.dart';
 
 final _log = logging.Logger('AsyncEvent');
 
 /// An [AsyncEvent] ID.
+@EnableReflection()
 class AsyncEventID implements Comparable<AsyncEventID> {
+  static bool _boot = false;
+
+  static void boot() {
+    if (_boot) return;
+    _boot = true;
+
+    AsyncEventID$reflection.boot();
+
+    AsyncEvent.boot();
+  }
+
   /// The epoch of this event.
   final int epoch;
 
@@ -21,9 +38,20 @@ class AsyncEventID implements Comparable<AsyncEventID> {
 
   const AsyncEventID.any() : this(0, -1);
 
-  /// Returns the previous serial ID.
+  factory AsyncEventID.from(Object o) {
+    if (o is AsyncEventID) return o;
+    if (o is Map<String, Object?>) return AsyncEventID.fromJson(o);
+
+    var s = o.toString();
+    return AsyncEventID.parse(s);
+  }
+
+  /// Returns the previous serial ID in the same [epoch].
   AsyncEventID? get previous =>
       serial > 0 ? AsyncEventID(epoch, serial - 1) : null;
+
+  /// Returns the next serial ID in the same [epoch].
+  AsyncEventID? get next => AsyncEventID(epoch, serial + 1);
 
   @override
   bool operator ==(Object other) =>
@@ -48,7 +76,20 @@ class AsyncEventID implements Comparable<AsyncEventID> {
   }
 
   factory AsyncEventID.fromJson(Map<String, dynamic> json) {
-    return AsyncEventID(json['epoch'], json['serial']);
+    var id = json['id'];
+
+    if (id != null && id is String) {
+      return AsyncEventID.parse(id);
+    } else {
+      var epoch = json['epoch'];
+      var serial = json['serial'];
+
+      if (epoch is! int || serial is! int) {
+        throw ArgumentError("Invalid JSON for `AsyncEventID`: $json");
+      }
+
+      return AsyncEventID(epoch, serial);
+    }
   }
 
   Map<String, dynamic> toJson() => {
@@ -61,6 +102,26 @@ class AsyncEventID implements Comparable<AsyncEventID> {
     return '$epoch#$serial';
   }
 
+  factory AsyncEventID.parse(String s) {
+    s = s.trim();
+    var idx = s.indexOf('#');
+    if (idx <= 0) {
+      throw FormatException("Invalid `AsyncEventID` format: $s");
+    }
+
+    var epochStr = s.substring(0, idx);
+    var serialStr = s.substring(idx + 1);
+
+    var epoch = int.tryParse(epochStr);
+    var serial = int.tryParse(serialStr);
+
+    if (epoch == null || serial == null) {
+      throw FormatException("Invalid `AsyncEventID` format: $s");
+    }
+
+    return AsyncEventID(epoch, serial);
+  }
+
   bool operator <(AsyncEventID other) => compareTo(other) < 0;
 
   bool operator <=(AsyncEventID other) => compareTo(other) <= 0;
@@ -71,7 +132,22 @@ class AsyncEventID implements Comparable<AsyncEventID> {
 }
 
 /// An [AsyncEventChannel] event.
+@EnableReflection()
 class AsyncEvent implements Comparable<AsyncEvent> {
+  static bool _boot = false;
+
+  static void boot() {
+    if (_boot) return;
+    _boot = true;
+
+    AsyncEvent$reflection.boot();
+
+    AsyncEventID.boot();
+  }
+
+  /// The [AsyncEventChannel] name of this event.
+  final String channelName;
+
   /// The ID of this event.
   final AsyncEventID id;
 
@@ -84,7 +160,10 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   /// The payload of this event.
   final Map<String, dynamic> payload;
 
-  AsyncEvent(this.id, this.time, this.type, this.payload);
+  AsyncEvent(this.channelName, Object id, this.time, this.type, this.payload)
+      : id = AsyncEventID.from(id) {
+    boot();
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -97,16 +176,19 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   @override
   int compareTo(AsyncEvent other) => id.compareTo(other.id);
 
-  factory AsyncEvent.fromJson(Map<String, dynamic> json) {
+  factory AsyncEvent.fromJson(Map<String, dynamic> json,
+      {String? channelName}) {
     return AsyncEvent(
+        json['channel'] ?? channelName!,
         AsyncEventID.fromJson(json),
         DateTime.fromMillisecondsSinceEpoch(json['time']),
         json['type'],
         json['payload']);
   }
 
-  Map<String, dynamic> toJson() => {
-        ...id.toJson(),
+  Map<String, dynamic> toJson({bool withChannelName = true}) => {
+        if (withChannelName) 'channel': channelName,
+        'id': id.toString(),
         'time': time.toUtc().millisecondsSinceEpoch,
         'type': type,
         'payload': payload,
@@ -128,7 +210,9 @@ class AsyncEventHub {
   /// The storage of [AsyncEvent].
   final AsyncEventStorage storage;
 
-  AsyncEventHub(this.name, this.storage);
+  AsyncEventHub(this.name, this.storage) {
+    AsyncEvent.boot();
+  }
 
   final Map<String, AsyncEventChannel> _channels =
       <String, AsyncEventChannel>{};
@@ -152,8 +236,12 @@ class AsyncEventHub {
           Map<String, dynamic> payload) =>
       storage.newEvent(channel.name, type, payload);
 
+  FutureOr<List<AsyncEvent>> _fetch(
+          AsyncEventChannel channel, AsyncEventID fromID) =>
+      storage.fetch(channel.name, fromID);
+
   /// Pull new events from storage.
-  FutureOr<bool> pull(String channelName, AsyncEventID? fromID) =>
+  FutureOr<int> pull(String channelName, AsyncEventID? fromID) =>
       storage.pull(channelName, fromID);
 
   @override
@@ -185,12 +273,6 @@ mixin WithLastEventID {
 
     if (last.epoch == eventID.epoch) {
       return last.serial + 1 == eventID.serial;
-    } else if (last.epoch + 1 == eventID.epoch) {
-      if (eventID.serial == 0) {
-        return true;
-      } else {
-        return false;
-      }
     } else {
       return false;
     }
@@ -286,23 +368,173 @@ class AsyncEventChannel with WithLastEventID {
   FutureOr<AsyncEvent?> submit(String type, Map<String, dynamic> payload) =>
       hub._submit(this, type, payload);
 
-  void _processEvent(AsyncEvent event) {
-    // Ignore old event:
-    if (!isAfterLastEventID(event.id)) {
-      return;
+  final Map<AsyncEventPullingConfig, AsyncEventPulling> _pullingByConfig =
+      <AsyncEventPullingConfig, AsyncEventPulling>{};
+
+  /// Returns a shared [AsyncEventPulling] based on the defined [AsyncEventPullingConfig].
+  AsyncEventPulling pulling(
+      {Duration period = const Duration(seconds: 10),
+      Duration? minInterval,
+      bool started = true}) {
+    var config =
+        AsyncEventPullingConfig(period: period, minInterval: minInterval);
+
+    var eventPulling = _pullingByConfig.putIfAbsent(
+        config, () => AsyncEventPulling.fromConfig(this, config));
+
+    if (started && !eventPulling.isStarted) {
+      eventPulling.start();
     }
 
-    // Normal sequence:
-    if (isNextEventID(event.id)) {
-      _lastEventID = event.id;
+    return eventPulling;
+  }
+
+  /// Fetches events of this channel starting [fromID].
+  FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID) =>
+      hub._fetch(this, fromID);
+
+  List<AsyncEvent>? _unflushedEvents;
+
+  /// Returns `true` if this instance has unflushed events.
+  bool get hasUnflushedEvents {
+    var unflushedEvents = _unflushedEvents;
+    return unflushedEvents != null && unflushedEvents.isNotEmpty;
+  }
+
+  bool _flushEvents() {
+    var unflushedEvents = _unflushedEvents;
+    if (unflushedEvents == null) {
+      return true;
+    } else if (unflushedEvents.isEmpty) {
+      _unflushedEvents = null;
+      return true;
     }
-    // Initial ID:
-    else if (_lastEventID == null || _lastEventID!.serial <= 0) {
-      _lastEventID = event.id;
+
+    unflushedEvents.sort();
+
+    var delLength = 0;
+
+    for (var i = 0; i < unflushedEvents.length; ++i) {
+      var event = unflushedEvents[i];
+
+      var processed = _processEvent(event, fromUnflushedEvents: true);
+
+      if (!processed) {
+        break;
+      }
+
+      delLength = i + 1;
     }
+
+    if (delLength > 0) {
+      if (delLength >= unflushedEvents.length) {
+        _unflushedEvents = null;
+        return true;
+      } else {
+        unflushedEvents.removeRange(0, delLength);
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  void _addToUnflushedEvents(AsyncEvent event) {
+    var unflushedEvents = _unflushedEvents ??= <AsyncEvent>[];
+    unflushedEvents.add(event);
+  }
+
+  bool _processEvent(AsyncEvent event, {bool fromUnflushedEvents = false}) {
+    if (!fromUnflushedEvents && hasUnflushedEvents) {
+      if (!_flushEvents()) {
+        _addToUnflushedEvents(event);
+      }
+    }
+
+    if (event.id.serial == 0) {
+      var processed = _processNewEpochEvent(event, fromUnflushedEvents);
+
+      if (processed) {
+        _logChannel.info("New epoch: ${event.id.epoch} ; $event");
+      }
+
+      return processed;
+    }
+
+    // Ignore old event:
+    if (!isAfterLastEventID(event.id)) {
+      return true;
+    }
+
+    // Out of sync event:
+    if (!isNextEventID(event.id)) {
+      if (!fromUnflushedEvents) {
+        _addToUnflushedEvents(event);
+      }
+      return false;
+    }
+
+    // Normal sequence (process it):
+    _lastEventID = event.id;
 
     for (var g in _subscriptionsGroups) {
       g._processEvent(event);
+    }
+
+    return true;
+  }
+
+  bool _processNewEpochEvent(AsyncEvent event, bool fromUnflushedEvents) {
+    var eventID = event.id;
+
+    var previousIDStr = event.payload['previousID'];
+    var previousID =
+        previousIDStr != null ? AsyncEventID.parse(previousIDStr) : null;
+
+    var lastEventID = _lastEventID;
+
+    var lastEpoch = -1;
+    var lastSerial = -1;
+
+    if (lastEventID != null) {
+      lastEpoch = lastEventID.epoch;
+      lastSerial = lastEventID.serial;
+    }
+
+    if (previousID == null) {
+      if (lastEpoch < eventID.epoch) {
+        _lastEventID = eventID;
+        return true;
+      } else if (lastEpoch == eventID.epoch) {
+        if (lastSerial <= 0) {
+          _lastEventID = eventID;
+        }
+
+        return true;
+      } else {
+        _logChannel.warning(
+            "New epoch event out of sync> lastEventID: $lastEventID ; event: $event");
+        return false;
+      }
+    }
+
+    // Normal sequence:
+    if (lastEventID == previousID) {
+      _lastEventID = eventID;
+      return true;
+    }
+    // Events already in future from previousID:
+    else if (lastEpoch > previousID.epoch) {
+      _logChannel.warning(
+          "New epoch event out of sync> lastEventID: $lastEventID ; event: $event ; previousID: $previousID");
+      return false;
+    }
+    // Out of order:
+    else {
+      if (!fromUnflushedEvents) {
+        _addToUnflushedEvents(event);
+      }
+      return true;
     }
   }
 
@@ -329,11 +561,238 @@ class AsyncEventChannel with WithLastEventID {
   }
 
   /// Checks for new events for this channel.
-  FutureOr<bool> pull() => hub.pull(name, lastEventID);
+  FutureOr<int> pull() {
+    var fromId = lastEventID?.next;
+    return hub.pull(name, fromId);
+  }
 
   @override
   String toString() {
     return 'AsyncEventChannel[$name]';
+  }
+}
+
+/// An [AsyncEventPulling] configuration.
+class AsyncEventPullingConfig {
+  /// The pulling period.
+  /// - Minimal: 10ms
+  final Duration period;
+
+  /// The minimal interval for consecutive [pull]s.
+  final Duration minInterval;
+
+  AsyncEventPullingConfig(
+      {this.period = const Duration(seconds: 10), Duration? minInterval})
+      : minInterval = _min(
+            period,
+            minInterval ??
+                Duration(
+                    milliseconds: math.max(period.inMilliseconds ~/ 10, 1))) {
+    if (period.inMilliseconds < 10) {
+      throw ArgumentError("period < 10ms");
+    }
+  }
+
+  static Duration _min(Duration a, Duration b) => a.compareTo(b) <= 0 ? a : b;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AsyncEventPullingConfig &&
+          runtimeType == other.runtimeType &&
+          period == other.period &&
+          minInterval == other.minInterval;
+
+  @override
+  int get hashCode => period.hashCode ^ minInterval.hashCode;
+
+  factory AsyncEventPullingConfig.fromJson(Map<String, dynamic> json) =>
+      AsyncEventPullingConfig(
+          period: Duration(milliseconds: json['period']),
+          minInterval: Duration(milliseconds: json['minInterval']));
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'period': period.inMilliseconds,
+        'minInterval': minInterval.inMilliseconds,
+      };
+
+  @override
+  String toString() {
+    return 'AsyncEventPullingConfig{period: $period, minInterval: $minInterval}';
+  }
+}
+
+/// Performs a periodic pulling of [AsyncEventChannel] events.
+class AsyncEventPulling {
+  /// The [AsyncEventChannel] ot perform pulling of events.
+  final AsyncEventChannel channel;
+
+  final AsyncEventPullingConfig config;
+
+  /// The pulling period.
+  /// - Minimal: 10ms
+  Duration get period => config.period;
+
+  /// The minimal interval for consecutive [pull]s.
+  Duration get minInterval => config.minInterval;
+
+  AsyncEventPulling(this.channel,
+      {Duration period = const Duration(seconds: 10), Duration? minInterval})
+      : config =
+            AsyncEventPullingConfig(period: period, minInterval: minInterval);
+
+  AsyncEventPulling.fromConfig(this.channel, this.config);
+
+  static Duration _min(Duration a, Duration b) => a.compareTo(b) <= 0 ? a : b;
+
+  bool _started = false;
+
+  bool get isStarted => _started;
+
+  /// Starts pulling.
+  void start() {
+    if (_started) return;
+    _started = true;
+    _stopped = false;
+
+    _autoPull();
+  }
+
+  bool _stopped = false;
+
+  bool get isStopped => _stopped && !isScheduled;
+
+  /// Stops pulling
+  void stop() {
+    if (_stopped) return;
+    _stopped = true;
+
+    if (!isScheduled) {
+      _started = false;
+    }
+  }
+
+  int _consecutiveEmptyEventsCount = 0;
+  int _lastEventsLength = 0;
+
+  /// Returns `true` if is currently pulling.
+  bool get isPulling => _pulling != null;
+
+  FutureOr<int>? _pulling;
+
+  /// Forces a [channel] pull.
+  FutureOr<int> pull() {
+    var pulling = _pulling;
+    if (pulling != null) {
+      return pulling;
+    }
+
+    var pullAsync = channel.pull();
+    _pulling = pullAsync;
+
+    return pullAsync.resolveMapped(_onPull);
+  }
+
+  FutureOr<int> _onPull(eventsLength) {
+    _pulling = null;
+
+    _lastEventsLength = eventsLength;
+
+    if (eventsLength <= 0) {
+      ++_consecutiveEmptyEventsCount;
+    } else {
+      _consecutiveEmptyEventsCount = 0;
+    }
+
+    var waitPulling = _waitPulling;
+    if (waitPulling != null) {
+      waitPulling.complete(true);
+      _waitPulling = null;
+    }
+
+    return eventsLength;
+  }
+
+  Completer<bool>? _waitPulling;
+
+  /// Waits for a [pull] and completes.
+  FutureOr<bool> waitPulling() {
+    if (!isStarted || isStopped) return false;
+
+    var pulling = _pulling;
+    if (pulling != null) {
+      return pulling.resolveWith(() => true);
+    }
+
+    var completer = _waitPulling ??= Completer<bool>();
+    return completer.future;
+  }
+
+  void _autoPull() {
+    if (_stopped) {
+      _started = false;
+      return;
+    }
+
+    pull().onResolve((_) => _schedule());
+  }
+
+  int _scheduleIdCount = 0;
+
+  int _scheduled = 0;
+
+  /// Returns `true` if a pulling was schedulled.
+  bool get isScheduled => _scheduled > 0;
+
+  void _schedule({bool force = false}) {
+    if (_stopped) {
+      _started = false;
+      return;
+    }
+
+    if (isScheduled && !force) return;
+
+    var scheduleId = ++_scheduleIdCount;
+    _scheduled = scheduleId;
+
+    var delay = _nextDelay();
+
+    Future.delayed(delay, () {
+      if (_scheduled != scheduleId) return;
+      _scheduled = 0;
+      _autoPull();
+    });
+  }
+
+  Duration _nextDelay() {
+    if (_lastEventsLength > 0) {
+      return minInterval;
+    }
+
+    switch (_consecutiveEmptyEventsCount) {
+      case 1:
+        {
+          return minInterval;
+        }
+      case 2:
+      case 3:
+        {
+          return _min(
+              Duration(
+                  milliseconds: minInterval.inMilliseconds *
+                      _consecutiveEmptyEventsCount),
+              period);
+        }
+      default:
+        {
+          return period;
+        }
+    }
+  }
+
+  @override
+  String toString() {
+    return 'AsyncEventPulling{channel: ${channel.name}, config: ${config.toJson()}, started: $_started, stopped: $_stopped, pulling: $isPulling, scheduled: $isScheduled, lastEventsLength: $_lastEventsLength, consecutiveEmptyEventsCount: $_consecutiveEmptyEventsCount}';
   }
 }
 
@@ -649,7 +1108,7 @@ class AsyncEventSubscription {
   FutureOr<bool> ensureSynchronized() => group.ensureSynchronized();
 
   /// Checks for new events for this subscription.
-  FutureOr<bool> pull() => _group.channel.pull();
+  FutureOr<int> pull() => _group.channel.pull();
 
   @override
   String toString() {

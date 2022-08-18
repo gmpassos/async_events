@@ -23,9 +23,12 @@ abstract class AsyncEventStorage {
 
   final Map<String, AsyncEventID> _channelsMaxIDs = <String, AsyncEventID>{};
 
-  FutureOr<AsyncEventID> _nextEventID(String channelName) {
-    return lastID(channelName).resolveOther<AsyncEventID, int>(epoch,
-        (lastEventID, epoch) {
+  /// Returns: nextID -> prevID?
+  FutureOr<MapEntry<AsyncEventID, AsyncEventID?>> _nextEventID(
+      String channelName) {
+    return lastID(channelName)
+        .resolveOther<MapEntry<AsyncEventID, AsyncEventID?>, int>(epoch,
+            (lastEventID, epoch) {
       int serial;
       if (lastEventID == null) {
         serial = 1;
@@ -45,7 +48,7 @@ abstract class AsyncEventStorage {
 
       if (cmp < 0) {
         _channelsMaxIDs[channelName] = eventID;
-        return eventID;
+        return MapEntry(eventID, lastEventID);
       }
 
       AsyncEventID eventID2;
@@ -60,14 +63,24 @@ abstract class AsyncEventStorage {
       }
 
       _channelsMaxIDs[channelName] = eventID2;
-      return eventID2;
+      return MapEntry(eventID2, lastEventID);
     });
   }
 
   FutureOr<AsyncEvent> _nextEvent(
       String channelName, String type, Map<String, dynamic> payload) {
-    return _nextEventID(channelName).resolveMapped((id) {
-      return AsyncEvent(id, currentTime, type, payload);
+    return _nextEventID(channelName).resolveMapped((nextID) {
+      var id = nextID.key;
+      var prevID = nextID.value;
+
+      var event = AsyncEvent(channelName, id, currentTime, type, payload);
+
+      if (id.serial == 1) {
+        return _newEpochEvent(channelName, id.epoch, prevID)
+            .resolveWith(() => event);
+      } else {
+        return event;
+      }
     });
   }
 
@@ -82,6 +95,25 @@ abstract class AsyncEventStorage {
         _notifyNewEvent(channelName, event);
         return event;
       });
+    });
+  }
+
+  FutureOr<AsyncEvent?> _newEpochEvent(
+      String channelName, int epoch, AsyncEventID? previousID) {
+    var id = AsyncEventID(epoch, 0);
+
+    var event = AsyncEvent(
+        channelName, id, currentTime, 'new_epoch', <String, dynamic>{
+      if (previousID != null) 'previousID': previousID.toString()
+    });
+
+    return store(channelName, event).resolveMapped((ok) {
+      if (!ok) {
+        _log.warning("Error storing new epoch event: $event");
+        return null;
+      }
+      _notifyNewEvent(channelName, event);
+      return event;
     });
   }
 
@@ -133,7 +165,7 @@ abstract class AsyncEventStorage {
 
   FutureOr<int> purge(int untilEpoch);
 
-  FutureOr<bool> pull(String channelName, AsyncEventID? fromID);
+  FutureOr<int> pull(String channelName, AsyncEventID? fromID);
 }
 
 /// Wraps [AsyncEventStorage]'s calls returning JSON values.
@@ -279,13 +311,18 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   }
 
   @override
-  FutureOr<bool> pull(String channelName, AsyncEventID? fromID) {
+  FutureOr<int> pull(String channelName, AsyncEventID? fromID) {
     fromID ??= AsyncEventID.zero();
 
     return fetch(channelName, fromID).resolveMapped((events) {
       _notifyNewEvents(channelName, events);
-      return true;
+      return events.length;
     });
+  }
+
+  @override
+  String toString() {
+    return 'AsyncEventStorageMemory{initTime: $initTime, channelsEvents: ${_channelsEvents.map((key, value) => MapEntry(key, value.length))}';
   }
 }
 
@@ -326,13 +363,18 @@ class AsyncEventStorageRemote extends AsyncEventStorage {
   FutureOr<int> purge(int untilEpoch) => client.purge(untilEpoch);
 
   @override
-  FutureOr<bool> pull(String channelName, AsyncEventID? fromID) {
+  FutureOr<int> pull(String channelName, AsyncEventID? fromID) {
     fromID ??= AsyncEventID.zero();
 
     return fetch(channelName, fromID).resolveMapped((events) {
       _notifyNewEvents(channelName, events);
-      return true;
+      return events.length;
     });
+  }
+
+  @override
+  String toString() {
+    return 'AsyncEventStorageRemote{client: $client}';
   }
 }
 
