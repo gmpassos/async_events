@@ -1,6 +1,6 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/1.2.6
+// BUILDER: reflection_factory/1.2.12
 // BUILD COMMAND: dart run build_runner build
 //
 
@@ -25,7 +25,8 @@ AsyncEventID AsyncEventID$fromJsonEncoded(String jsonEncoded) =>
     AsyncEventID$reflection.staticInstance.fromJsonEncoded(jsonEncoded);
 
 class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
-  AsyncEvent$reflection([AsyncEvent? object]) : super(AsyncEvent, object);
+  AsyncEvent$reflection([AsyncEvent? object])
+      : super(AsyncEvent, 'AsyncEvent', object);
 
   static bool _registered = false;
   @override
@@ -41,7 +42,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
   Version get languageVersion => Version.parse('2.17.0');
 
   @override
-  Version get reflectionFactoryVersion => Version.parse('1.2.6');
+  Version get reflectionFactoryVersion => Version.parse('1.2.12');
 
   @override
   AsyncEvent$reflection withObject([AsyncEvent? obj]) =>
@@ -100,8 +101,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
                   true, null, null),
               ParameterReflection(
                   TypeReflection.tObject, 'id', false, true, null, null),
-              ParameterReflection(
-                  TypeReflection(DateTime), 'time', false, true, null, null),
+              ParameterReflection(TypeReflection<DateTime>(DateTime), 'time',
+                  false, true, null, null),
               ParameterReflection(
                   TypeReflection.tString, 'type', false, true, null, null),
               ParameterReflection(TypeReflection.tMapStringDynamic, 'payload',
@@ -190,7 +191,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
         return FieldReflection<AsyncEvent, T>(
           this,
           AsyncEvent,
-          TypeReflection(AsyncEventID),
+          TypeReflection<AsyncEventID>(AsyncEventID),
           'id',
           false,
           (o) => () => o!.id as T,
@@ -204,7 +205,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
         return FieldReflection<AsyncEvent, T>(
           this,
           AsyncEvent,
-          TypeReflection(DateTime),
+          TypeReflection<DateTime>(DateTime),
           'time',
           false,
           (o) => () => o!.time as T,
@@ -292,8 +293,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
             obj,
             false,
             const <ParameterReflection>[
-              ParameterReflection(
-                  TypeReflection(AsyncEvent), 'other', false, true, null, null)
+              ParameterReflection(TypeReflection<AsyncEvent>(AsyncEvent),
+                  'other', false, true, null, null)
             ],
             null,
             null,
@@ -363,7 +364,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
 }
 
 class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
-  AsyncEventID$reflection([AsyncEventID? object]) : super(AsyncEventID, object);
+  AsyncEventID$reflection([AsyncEventID? object])
+      : super(AsyncEventID, 'AsyncEventID', object);
 
   static bool _registered = false;
   @override
@@ -379,7 +381,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
   Version get languageVersion => Version.parse('2.17.0');
 
   @override
-  Version get reflectionFactoryVersion => Version.parse('1.2.6');
+  Version get reflectionFactoryVersion => Version.parse('1.2.12');
 
   @override
   AsyncEventID$reflection withObject([AsyncEventID? obj]) =>
@@ -558,7 +560,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
         return FieldReflection<AsyncEventID, T>(
           this,
           AsyncEventID,
-          TypeReflection(AsyncEventID),
+          TypeReflection<AsyncEventID>(AsyncEventID),
           'previous',
           true,
           (o) => () => o!.previous as T,
@@ -572,7 +574,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
         return FieldReflection<AsyncEventID, T>(
           this,
           AsyncEventID,
-          TypeReflection(AsyncEventID),
+          TypeReflection<AsyncEventID>(AsyncEventID),
           'next',
           true,
           (o) => () => o!.next as T,
@@ -632,8 +634,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
             obj,
             false,
             const <ParameterReflection>[
-              ParameterReflection(TypeReflection(AsyncEventID), 'other', false,
-                  true, null, null)
+              ParameterReflection(TypeReflection<AsyncEventID>(AsyncEventID),
+                  'other', false, true, null, null)
             ],
             null,
             null,

@@ -1,3 +1,7 @@
+# 1.0.4
+
+- reflection_factory: ^1.2.12
+
 ## 1.0.3
 
 - `AsyncEvent`:
