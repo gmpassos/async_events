@@ -1,3 +1,9 @@
+## 1.0.5
+
+- `AsyncEventChannel`:
+  - Added `fetchDelayed` and `waitNewEvent`.
+- reflection_factory: ^1.2.13
+
 ## 1.0.4
 
 - reflection_factory: ^1.2.12

@@ -1,6 +1,6 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/1.2.12
+// BUILDER: reflection_factory/1.2.13
 // BUILD COMMAND: dart run build_runner build
 //
 
@@ -42,7 +42,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent> {
   Version get languageVersion => Version.parse('2.17.0');
 
   @override
-  Version get reflectionFactoryVersion => Version.parse('1.2.12');
+  Version get reflectionFactoryVersion => Version.parse('1.2.13');
 
   @override
   AsyncEvent$reflection withObject([AsyncEvent? obj]) =>
@@ -381,7 +381,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID> {
   Version get languageVersion => Version.parse('2.17.0');
 
   @override
-  Version get reflectionFactoryVersion => Version.parse('1.2.12');
+  Version get reflectionFactoryVersion => Version.parse('1.2.13');
 
   @override
   AsyncEventID$reflection withObject([AsyncEventID? obj]) =>
