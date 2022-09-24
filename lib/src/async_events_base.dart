@@ -394,6 +394,25 @@ class AsyncEventChannel with WithLastEventID {
   FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID) =>
       hub._fetch(this, fromID);
 
+  /// Fetches events of this channel starting [fromID] with a [timeout].
+  FutureOr<List<AsyncEvent>> fetchDelayed(AsyncEventID fromID,
+      {Duration timeout = const Duration(seconds: 1)}) {
+    if (timeout.inMilliseconds <= 0) return fetch(fromID);
+
+    return fetch(fromID).resolveMapped((events) {
+      if (events.isNotEmpty) {
+        return events;
+      }
+
+      return waitNewEvent(timeout).then((_) {
+        // Ensure that the `fetch` happens after any
+        // `Future` already scheduled that can populate
+        // more events:
+        return Future.microtask(() => fetch(fromID));
+      });
+    });
+  }
+
   List<AsyncEvent>? _unflushedEvents;
 
   /// Returns `true` if this instance has unflushed events.
@@ -478,6 +497,8 @@ class AsyncEventChannel with WithLastEventID {
     // Normal sequence (process it):
     _lastEventID = event.id;
 
+    _onNewEvent(event);
+
     for (var g in _subscriptionsGroups) {
       g._processEvent(event);
     }
@@ -559,6 +580,39 @@ class AsyncEventChannel with WithLastEventID {
         }
       }
     }
+  }
+
+  Completer<AsyncEvent?>? _waitingNewEvents;
+
+  void _onNewEvent(AsyncEvent event) {
+    var waitingNewEvents = _waitingNewEvents;
+
+    if (waitingNewEvents != null) {
+      waitingNewEvents.complete(event);
+    }
+  }
+
+  /// Waits for a new [AsyncEvent] with a [timeout].
+  Future<AsyncEvent?> waitNewEvent(Duration timeout) {
+    Future<AsyncEvent?> waitingFuture;
+
+    var waitingNewEvents = _waitingNewEvents;
+
+    if (waitingNewEvents != null) {
+      waitingFuture = waitingNewEvents.future;
+    } else {
+      waitingNewEvents = _waitingNewEvents = Completer<AsyncEvent?>();
+
+      waitingFuture = waitingNewEvents.future.then((event) {
+        var prev = _waitingNewEvents;
+        if (identical(prev, waitingNewEvents)) {
+          _waitingNewEvents = null;
+        }
+        return event;
+      });
+    }
+
+    return waitingFuture.timeout(timeout, onTimeout: () => null);
   }
 
   /// Checks for new events for this channel.
@@ -742,7 +796,7 @@ class AsyncEventPulling {
 
   int _scheduled = 0;
 
-  /// Returns `true` if a pulling was schedulled.
+  /// Returns `true` if a pulling was scheduled.
   bool get isScheduled => _scheduled > 0;
 
   void _schedule({bool force = false}) {

@@ -1,4 +1,5 @@
 import 'package:async_events/async_events.dart';
+import 'package:async_extension/async_extension.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:reflection_factory/reflection_factory.dart';
 import 'package:test/test.dart';
@@ -110,10 +111,18 @@ Future<void> _doTestBasic(
   expect(eventPulling.isStarted, isTrue);
   expect(eventPulling.isStopped, isFalse);
 
+  AsyncEvent? waitEventResult;
+
+  c1
+      .waitNewEvent(Duration(seconds: 20))
+      .then((event) => waitEventResult = event);
+
   var eventC1_2 = await c1.submit('t', {'name': 't4'});
 
   log.info("waitPulling 1> $eventPulling");
   expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(waitEventResult, isNotNull);
 
   expect(c1Events.map((e) => e.toJson()),
       [eventC1_1.toJson(), eventC1_2!.toJson()]);
@@ -124,10 +133,18 @@ Future<void> _doTestBasic(
 
   expect(await hub.epoch, equals(1));
 
+  List<AsyncEvent>? fetchDelayedEvents;
+
+  c1.fetchDelayed(eventC1_2.id, timeout: Duration(seconds: 20)).then((events) {
+    return fetchDelayedEvents = events;
+  });
+
   var eventC1_3 = await c1.submit('t', {'name': 't5'});
 
   log.info("waitPulling 2> $eventPulling");
   expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(fetchDelayedEvents, isNotEmpty);
 
   expect(c1Events.map((e) => e.toJson()),
       [eventC1_1.toJson(), eventC1_2.toJson(), eventC1_3!.toJson()]);
@@ -185,28 +202,28 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
   _MyAsyncEventStorageServer(this.storage);
 
   @override
-  Future<int> get epoch => super.epoch.asFuture;
+  Future<int> get epoch => super.epoch.asFutureDelayed;
 
   @override
   Future<Map<String, dynamic>?> newEvent(
           String channelName, String type, Map<String, dynamic> payload) =>
-      super.newEvent(channelName, type, payload).asFuture;
+      super.newEvent(channelName, type, payload).asFutureDelayed;
 
   @override
   Future<List<Map<String, dynamic>>> fetch(
           String channelName, AsyncEventID fromID) =>
-      super.fetch(channelName, fromID).asFuture;
+      super.fetch(channelName, fromID).asFutureDelayed;
 
   @override
   Future<Map<String, dynamic>?> lastID(String channelName) =>
-      super.lastID(channelName).asFuture;
+      super.lastID(channelName).asFutureDelayed;
 
   @override
   Future<Map<String, dynamic>?> last(String channelName) =>
-      super.last(channelName).asFuture;
+      super.last(channelName).asFutureDelayed;
 
   @override
-  Future<int> purge(int untilEpoch) => super.purge(untilEpoch).asFuture;
+  Future<int> purge(int untilEpoch) => super.purge(untilEpoch).asFutureDelayed;
 
   @override
   String toString() {
@@ -215,7 +232,7 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 }
 
 extension _FutureOrExtension<T> on FutureOr<T> {
-  Future<T> get asFuture {
+  Future<T> get asFutureDelayed {
     var self = this;
     if (self is Future<T>) {
       return self;

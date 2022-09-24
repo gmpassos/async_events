@@ -1,6 +1,6 @@
 name: async_events
 description: A portable asynchronous event hub supporting multiple storage types
-version: 1.0.4
+version: 1.0.5
 homepage: https://github.com/gmpassos/async_events
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   collection: ^1.16.0
   dependency_validator: ^3.2.2
   logging: ^1.0.2
-  reflection_factory: ^1.2.12
+  reflection_factory: ^1.2.13
 
 dev_dependencies:
   lints: ^2.0.0
