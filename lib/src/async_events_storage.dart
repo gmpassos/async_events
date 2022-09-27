@@ -326,20 +326,130 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   }
 }
 
+class AsyncEventError extends Error {
+  final String message;
+  final Object? cause;
+
+  AsyncEventError(this.message, {this.cause});
+
+  factory AsyncEventError.from(String? message, Object? cause) {
+    if (message == null) {
+      if (cause != null) {
+        return AsyncEventError('$cause', cause: cause);
+      } else {
+        return AsyncEventError('', cause: cause);
+      }
+    } else {
+      return AsyncEventError(message, cause: cause);
+    }
+  }
+
+  @override
+  String toString() => "[AsyncEventError] $message";
+}
+
 /// A remote [AsyncEventStorage].
 class AsyncEventStorageRemote extends AsyncEventStorage {
   /// The client that access the real storage.
   final AsyncEventStorageClient client;
+  final Duration retryInterval;
 
-  AsyncEventStorageRemote(super.name, this.client);
+  AsyncEventStorageRemote(super.name, this.client,
+      {this.retryInterval = const Duration(seconds: 1)});
+
+  FutureOr<R> _call<R>(FutureOr<R> Function() call,
+      {R? errorValue,
+      bool nullErrorValue = false,
+      String? errorMessage,
+      String? methodName,
+      int maxRetries = 0,
+      Duration? retryInterval}) {
+    if (maxRetries < 0) {
+      maxRetries = 0;
+    }
+
+    retryInterval ??= this.retryInterval;
+
+    if (retryInterval.inMilliseconds < 1) {
+      retryInterval = Duration(milliseconds: 1);
+    }
+
+    if (errorMessage == null && methodName != null) {
+      errorMessage = "Error calling `$methodName`> client: $client";
+    }
+
+    try {
+      var ret = call();
+
+      if (ret is Future<R>) {
+        return ret.catchError((e, s) => _callRetry(call, errorValue,
+            nullErrorValue, errorMessage, maxRetries, retryInterval!, e, s));
+      } else {
+        return ret;
+      }
+    } catch (e, s) {
+      return _callRetry(call, errorValue, nullErrorValue, errorMessage,
+          maxRetries, retryInterval, e, s);
+    }
+  }
+
+  Future<R> _callRetry<R>(
+      FutureOr<R> Function() call,
+      R? errorValue,
+      bool nullErrorValue,
+      String? errorMessage,
+      int maxRetries,
+      Duration retryInterval,
+      Object error,
+      StackTrace stackTrace) async {
+    final retryIntervalMs = retryInterval.inMilliseconds;
+
+    for (var i = 0; i < maxRetries; ++i) {
+      var intervalMs = _calcInterval(i, retryIntervalMs);
+
+      await Future.delayed(Duration(milliseconds: intervalMs));
+
+      try {
+        var ret = await call();
+        return ret;
+      } catch (e, s) {
+        error = e;
+        stackTrace = s;
+      }
+    }
+
+    if (nullErrorValue) return null as R;
+
+    if (errorValue != null) {
+      return errorValue;
+    }
+
+    Error.throwWithStackTrace(
+        AsyncEventError.from(errorMessage, error), stackTrace);
+  }
+
+  int _calcInterval(final int i, final int retryIntervalMs) {
+    int intervalMs;
+    if (i == 0) {
+      intervalMs = retryIntervalMs ~/ 2;
+    } else {
+      var r = 1 + (0.20 * (i - 1));
+      intervalMs = (retryIntervalMs * r).toInt();
+    }
+
+    intervalMs = intervalMs.clamp(1, retryIntervalMs * 3);
+    return intervalMs;
+  }
 
   @override
-  FutureOr<int> get epoch => client.epoch;
+  FutureOr<int> get epoch =>
+      _call(() => client.epoch, methodName: 'epoch', maxRetries: 5);
 
   @override
   FutureOr<AsyncEvent?> newEvent(
           String channelName, String type, Map<String, dynamic> payload) =>
-      client.newEvent(channelName, type, payload);
+      _call(() => client.newEvent(channelName, type, payload),
+          methodName: 'newEvent', nullErrorValue: true);
 
   @override
   @Deprecated(
@@ -350,17 +460,21 @@ class AsyncEventStorageRemote extends AsyncEventStorage {
 
   @override
   FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID) =>
-      client.fetch(channelName, fromID);
+      _call(() => client.fetch(channelName, fromID),
+          methodName: 'fetch', maxRetries: 5, errorValue: <AsyncEvent>[]);
 
   @override
   FutureOr<AsyncEventID?> lastID(String channelName) =>
-      client.lastID(channelName);
+      _call(() => client.lastID(channelName),
+          methodName: 'lastID', maxRetries: 5);
 
   @override
-  FutureOr<AsyncEvent?> last(String channelName) => client.last(channelName);
+  FutureOr<AsyncEvent?> last(String channelName) =>
+      _call(() => client.last(channelName), methodName: 'last', maxRetries: 5);
 
   @override
-  FutureOr<int> purge(int untilEpoch) => client.purge(untilEpoch);
+  FutureOr<int> purge(int untilEpoch) =>
+      _call(() => client.purge(untilEpoch), methodName: 'purge', maxRetries: 5);
 
   @override
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) {

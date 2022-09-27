@@ -11,6 +11,7 @@ import 'async_events_storage.dart';
 part 'reflection/async_events_base.g.dart';
 
 final _log = logging.Logger('AsyncEvent');
+final _logAsyncEventPulling = logging.Logger('AsyncEventPulling');
 
 /// An [AsyncEvent] ID.
 @EnableReflection()
@@ -742,13 +743,26 @@ class AsyncEventPulling {
       return pulling;
     }
 
-    var pullAsync = channel.pull();
-    _pulling = pullAsync;
+    try {
+      var pullAsync = channel.pull();
+      _pulling = pullAsync;
 
-    return pullAsync.resolveMapped(_onPull);
+      if (pullAsync is Future<int>) {
+        return pullAsync.then(_onPull, onError: (e, s) {
+          _logAsyncEventPulling.severe(
+              "Error pulling> channel: $channel", e, s);
+          return _onPull(0);
+        });
+      } else {
+        return _onPull(pullAsync);
+      }
+    } catch (e, s) {
+      _logAsyncEventPulling.severe("Error pulling> channel: $channel", e, s);
+      return _onPull(0);
+    }
   }
 
-  FutureOr<int> _onPull(eventsLength) {
+  FutureOr<int> _onPull(int eventsLength) {
     _pulling = null;
 
     _lastEventsLength = eventsLength;

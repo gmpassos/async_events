@@ -4,14 +4,14 @@ import 'package:logging/logging.dart' as logging;
 import 'package:reflection_factory/reflection_factory.dart';
 import 'package:test/test.dart';
 
+final log = logging.Logger('Test');
+
 const _epochPeriod = Duration(seconds: 2);
 
 void main() {
   logging.Logger.root.level = logging.Level.ALL;
   logging.Logger.root.onRecord
       .listen((event) => print('${DateTime.now()}\t$event'));
-
-  final log = logging.Logger('test');
 
   group('AsyncEvent', () {
     test('json', () async {
@@ -209,10 +209,22 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
           String channelName, String type, Map<String, dynamic> payload) =>
       super.newEvent(channelName, type, payload).asFutureDelayed;
 
+  final Map<String, int> _fetchRequestCounter = <String, int>{};
+
   @override
   Future<List<Map<String, dynamic>>> fetch(
-          String channelName, AsyncEventID fromID) =>
-      super.fetch(channelName, fromID).asFutureDelayed;
+      String channelName, AsyncEventID fromID) {
+    var key = '$channelName>$fromID';
+    var count =
+        _fetchRequestCounter.update(key, (c) => c + 1, ifAbsent: () => 1);
+
+    if (count == 2) {
+      log.severe("Forcing error: $key = $count");
+      throw StateError("Forcing error");
+    }
+
+    return super.fetch(channelName, fromID).asFutureDelayed;
+  }
 
   @override
   Future<Map<String, dynamic>?> lastID(String channelName) =>

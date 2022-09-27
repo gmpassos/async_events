@@ -1,3 +1,11 @@
+## 1.0.6
+
+- Added `AsyncEventPulling.pull`.
+- Add `AsyncEventError`.
+- `AsyncEventStorageRemote`:
+  - Added field `retryInterval`.
+  - Retries of failed requests.
+
 ## 1.0.5
 
 - `AsyncEventChannel`:
