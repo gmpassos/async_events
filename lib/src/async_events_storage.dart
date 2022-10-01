@@ -6,6 +6,8 @@ import 'package:logging/logging.dart' as logging;
 
 final _log = logging.Logger('AsyncEventStorage');
 
+final _logRemote = logging.Logger('AsyncEventStorageRemote');
+
 abstract class AsyncEventStorage {
   final String name;
 
@@ -382,18 +384,19 @@ class AsyncEventStorageRemote extends AsyncEventStorage {
       var ret = call();
 
       if (ret is Future<R>) {
-        return ret.catchError((e, s) => _callRetry(call, errorValue,
+        return ret.catchError((e, s) => _callRetry(methodName, call, errorValue,
             nullErrorValue, errorMessage, maxRetries, retryInterval!, e, s));
       } else {
         return ret;
       }
     } catch (e, s) {
-      return _callRetry(call, errorValue, nullErrorValue, errorMessage,
-          maxRetries, retryInterval, e, s);
+      return _callRetry(methodName, call, errorValue, nullErrorValue,
+          errorMessage, maxRetries, retryInterval, e, s);
     }
   }
 
   Future<R> _callRetry<R>(
+      String? methodName,
       FutureOr<R> Function() call,
       R? errorValue,
       bool nullErrorValue,
@@ -402,6 +405,16 @@ class AsyncEventStorageRemote extends AsyncEventStorage {
       Duration retryInterval,
       Object error,
       StackTrace stackTrace) async {
+    if (maxRetries < 1) {
+      Error.throwWithStackTrace(
+          AsyncEventError.from(errorMessage, error), stackTrace);
+    }
+
+    methodName ??= '?';
+
+    _logRemote.warning(
+        "Error calling method `$methodName`. Retrying ($maxRetries) call. Error: $error");
+
     final retryIntervalMs = retryInterval.inMilliseconds;
 
     for (var i = 0; i < maxRetries; ++i) {

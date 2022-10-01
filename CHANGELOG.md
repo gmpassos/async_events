@@ -1,3 +1,8 @@
+## 1.0.7
+
+- `AsyncEventStorageRemote`: log call error before retry attempt.
+- reflection_factory: ^1.2.17
+
 ## 1.0.6
 
 - Added `AsyncEventPulling.pull`.
