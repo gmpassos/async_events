@@ -149,6 +149,17 @@ Future<void> _doTestBasic(
   expect(c1Events.map((e) => e.toJson()),
       [eventC1_1.toJson(), eventC1_2.toJson(), eventC1_3!.toJson()]);
 
+  expect(await storage.last('c1'), eventC1_3);
+
+  var submitAsync = c1.submit('t', {'name': 't6'});
+
+  eventPulling.cancelChannelCalls();
+
+  var eventC1_4 = await submitAsync;
+  log.info("Submit canceled: $eventC1_4");
+
+  expect(eventC1_4, submitAsync is Future ? isNull : isNotNull);
+
   eventPulling.stop();
   await _sleep(log, 300);
 
@@ -167,7 +178,10 @@ Future<void> _doTestBasic(
   sub2b.cancel();
   expect(sub1.isSubscribed, isFalse);
 
-  expect(await storage.last('c1'), eventC1_3);
+  expect(
+      await storage.last('c1'),
+      isA<AsyncEvent>()
+          .having((evt) => evt.payload, 'payload', {'name': 't6'}));
   expect(await storage.last('c2'), eventC2_2);
 
   log.info("Hub: $hub");

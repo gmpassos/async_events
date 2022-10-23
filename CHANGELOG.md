@@ -1,3 +1,12 @@
+## 1.0.8
+
+- Added `AsyncCaller`: expose call handler with retry support.
+- `AsyncEventHub` and `AsyncEventStorageRemote`:
+  - Added `cancelChannelCalls`.
+- `AsyncEventPulling`: added `cancelPulling`.
+- `AsyncEventSubscriptionGroup._flushSync`:
+  - Fix possible stack overflow when flush is not using `Future`. 
+
 ## 1.0.7
 
 - `AsyncEventStorageRemote`: log call error before retry attempt.
