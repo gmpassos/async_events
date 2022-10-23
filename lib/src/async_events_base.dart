@@ -246,6 +246,10 @@ class AsyncEventHub {
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) =>
       storage.pull(channelName, fromID);
 
+  /// Cancels channel with [channelName] calls.
+  void cancelChannelCalls(String channelName) =>
+      storage.cancelChannelCalls(channelName);
+
   @override
   String toString() {
     return 'AsyncEventHub[$name]{storage: $storage, channels: ${_channels.keys.toList()}}';
@@ -622,6 +626,9 @@ class AsyncEventChannel with WithLastEventID {
     return hub.pull(name, fromId);
   }
 
+  /// Cancels current channel calls.
+  void cancelCalls() => hub.cancelChannelCalls(name);
+
   @override
   String toString() {
     return 'AsyncEventChannel[$name]';
@@ -719,14 +726,23 @@ class AsyncEventPulling {
   bool get isStopped => _stopped && !isScheduled;
 
   /// Stops pulling
-  void stop() {
+  ///
+  /// - If [cancelChannelCalls] is `true` it will call [cancelChannelCalls].
+  ///   Any event pulling or submit in this channel will be cancelled.
+  void stop({bool cancelChannelCalls = false}) {
     if (_stopped) return;
     _stopped = true;
 
     if (!isScheduled) {
       _started = false;
     }
+
+    if (cancelChannelCalls) {
+      this.cancelChannelCalls();
+    }
   }
+
+  void cancelChannelCalls() => channel.cancelCalls();
 
   int _consecutiveEmptyEventsCount = 0;
   int _lastEventsLength = 0;
@@ -764,7 +780,6 @@ class AsyncEventPulling {
 
   FutureOr<int> _onPull(int eventsLength) {
     _pulling = null;
-
     _lastEventsLength = eventsLength;
 
     if (eventsLength <= 0) {
@@ -1078,10 +1093,16 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
     _flushSync();
   }
 
-  void _flushSync() {
-    _flushEvents().resolveMapped((_) {
+  void _flushSync([int retry = 0]) {
+    var flushEventsAsync = _flushEvents();
+
+    flushEventsAsync.resolveMapped((_) {
       if (hasUnflushedEvents) {
-        _flushSync();
+        if (retry <= 3 || flushEventsAsync is Future) {
+          _flushSync(retry + 1);
+        } else {
+          Future.microtask(() => _flushSync(retry + 1));
+        }
       } else {
         _finishSync();
       }
@@ -1183,4 +1204,30 @@ class AsyncEventSubscription {
   String toString() {
     return 'AsyncEventSubscription[${_group.channel.name}]{fromID: $fromID}';
   }
+}
+
+/// An error while handling an [AsyncEvent].
+class AsyncEventError extends Error {
+  /// The error message.
+  final String message;
+
+  /// The original native error.
+  final Object? cause;
+
+  AsyncEventError(this.message, {this.cause});
+
+  factory AsyncEventError.from(String? message, Object? cause) {
+    if (message == null) {
+      if (cause != null) {
+        return AsyncEventError('$cause', cause: cause);
+      } else {
+        return AsyncEventError('', cause: cause);
+      }
+    } else {
+      return AsyncEventError(message, cause: cause);
+    }
+  }
+
+  @override
+  String toString() => "[AsyncEventError] $message";
 }
