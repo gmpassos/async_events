@@ -3,7 +3,7 @@
 [![pub package](https://img.shields.io/pub/v/async_events.svg?logo=dart&logoColor=00b9fc)](https://pub.dartlang.org/packages/async_events)
 [![Null Safety](https://img.shields.io/badge/null-safety-brightgreen)](https://dart.dev/null-safety)
 [![Codecov](https://img.shields.io/codecov/c/github/gmpassos/async_events)](https://app.codecov.io/gh/gmpassos/async_events)
-[![CI](https://img.shields.io/github/workflow/status/gmpassos/async_events/Dart%20CI/master?logo=github-actions&logoColor=white)](https://github.com/gmpassos/async_events/actions)
+[![Dart CI](https://github.com/gmpassos/async_events/actions/workflows/dart.yml/badge.svg?branch=master)](https://github.com/gmpassos/async_events/actions/workflows/dart.yml)
 [![GitHub Tag](https://img.shields.io/github/v/tag/gmpassos/async_events?logo=git&logoColor=white)](https://github.com/gmpassos/async_events/releases)
 [![New Commits](https://img.shields.io/github/commits-since/gmpassos/async_events/latest?logo=git&logoColor=white)](https://github.com/gmpassos/async_events/network)
 [![Last Commits](https://img.shields.io/github/last-commit/gmpassos/async_events?logo=git&logoColor=white)](https://github.com/gmpassos/async_events/commits/master)

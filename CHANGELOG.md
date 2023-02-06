@@ -1,3 +1,12 @@
+## 1.0.9
+
+- reflection_factory: ^2.0.0
+- logging: ^1.1.1
+- lints: ^2.0.1
+- build_runner: ^2.3.3
+- build_verify: ^3.1.0
+- test: ^1.22.2
+
 ## 1.0.8
 
 - Added `AsyncCaller`: expose call handler with retry support.
