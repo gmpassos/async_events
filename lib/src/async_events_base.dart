@@ -379,7 +379,8 @@ class AsyncEventChannel with WithLastEventID {
 
   /// Returns a shared [AsyncEventPulling] based on the defined [AsyncEventPullingConfig].
   AsyncEventPulling pulling(
-      {Duration period = const Duration(seconds: 10),
+      {Duration? delay,
+      Duration period = const Duration(seconds: 10),
       Duration? minInterval,
       bool started = true}) {
     var config =
@@ -389,7 +390,13 @@ class AsyncEventChannel with WithLastEventID {
         config, () => AsyncEventPulling.fromConfig(this, config));
 
     if (started && !eventPulling.isStarted) {
-      eventPulling.start();
+      if (delay != null && delay.inMilliseconds > 0) {
+        Future.delayed(delay, () {
+          eventPulling.start();
+        });
+      } else {
+        eventPulling.start();
+      }
     }
 
     return eventPulling;

@@ -1,3 +1,10 @@
+## 1.0.10
+
+- sdk: '>=2.18.0 <3.0.0'
+- async_extension: ^1.1.0
+- reflection_factory: ^2.0.7
+- test: ^1.24.1
+
 ## 1.0.9
 
 - reflection_factory: ^2.0.0
