@@ -1,3 +1,7 @@
+## 1.0.11
+
+- `AsyncEventChannel.pulling`: Fix behavior of `delay` parameter.
+
 ## 1.0.10
 
 - sdk: '>=2.18.0 <3.0.0'

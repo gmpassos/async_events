@@ -390,13 +390,7 @@ class AsyncEventChannel with WithLastEventID {
         config, () => AsyncEventPulling.fromConfig(this, config));
 
     if (started && !eventPulling.isStarted) {
-      if (delay != null && delay.inMilliseconds > 0) {
-        Future.delayed(delay, () {
-          eventPulling.start();
-        });
-      } else {
-        eventPulling.start();
-      }
+      eventPulling.start(delay: delay);
     }
 
     return eventPulling;
@@ -720,12 +714,16 @@ class AsyncEventPulling {
   bool get isStarted => _started;
 
   /// Starts pulling.
-  void start() {
+  void start({Duration? delay}) {
     if (_started) return;
     _started = true;
     _stopped = false;
 
-    _autoPull();
+    if (delay != null) {
+      Future.delayed(delay, _autoPull);
+    } else {
+      _autoPull();
+    }
   }
 
   bool _stopped = false;
