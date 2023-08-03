@@ -1,3 +1,13 @@
+## 1.0.12
+
+- `AsyncEventChannel._onNewEvent`:
+  - Fix call to `complete``: check if `!isCompleted`.
+- sdk: '>=2.18.0 <4.0.0'
+- async_extension: ^1.1.1
+- collection: ^1.18.0
+- reflection_factory: ^2.1.6
+- test: ^1.24.3
+
 ## 1.0.11
 
 - `AsyncEventChannel.pulling`: Fix behavior of `delay` parameter.

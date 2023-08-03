@@ -593,7 +593,7 @@ class AsyncEventChannel with WithLastEventID {
   void _onNewEvent(AsyncEvent event) {
     var waitingNewEvents = _waitingNewEvents;
 
-    if (waitingNewEvents != null) {
+    if (waitingNewEvents != null && !waitingNewEvents.isCompleted) {
       waitingNewEvents.complete(event);
     }
   }
@@ -795,6 +795,7 @@ class AsyncEventPulling {
 
     var waitPulling = _waitPulling;
     if (waitPulling != null) {
+      assert(!waitPulling.isCompleted);
       waitPulling.complete(true);
       _waitPulling = null;
     }
@@ -1119,6 +1120,7 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
     _sync = true;
 
     if (syncWaiting != null) {
+      assert(!syncWaiting.isCompleted);
       syncWaiting.complete(true);
       _syncWaiting = null;
     }
