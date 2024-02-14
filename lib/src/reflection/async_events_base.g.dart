@@ -1,11 +1,14 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/2.1.6
+// BUILDER: reflection_factory/2.3.0
 // BUILD COMMAND: dart run build_runner build
 //
 
 // coverage:ignore-file
 // ignore_for_file: unused_element
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+// ignore_for_file: camel_case_types
+// ignore_for_file: camel_case_extensions
 // ignore_for_file: unnecessary_const
 // ignore_for_file: unnecessary_cast
 // ignore_for_file: unnecessary_type_check
@@ -17,7 +20,7 @@ typedef __TI<T> = TypeInfo<T>;
 typedef __PR = ParameterReflection;
 
 mixin __ReflectionMixin {
-  static final Version _version = Version.parse('2.1.6');
+  static final Version _version = Version.parse('2.3.0');
 
   Version get reflectionFactoryVersion => _version;
 
@@ -60,7 +63,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   @override
-  Version get languageVersion => Version.parse('2.18.0');
+  Version get languageVersion => Version.parse('3.0.0');
 
   @override
   AsyncEvent$reflection withObject([AsyncEvent? obj]) =>
@@ -103,7 +106,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   List<String> get constructorsNames => _constructorsNames;
 
   static final Map<String, ConstructorReflection<AsyncEvent>> _constructors =
-      <String, ConstructorReflection<AsyncEvent>>{};
+      {};
 
   @override
   ConstructorReflection<AsyncEvent>? constructor(String constructorName) {
@@ -187,10 +190,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   List<String> get fieldsNames => _fieldsNames;
 
   static final Map<String, FieldReflection<AsyncEvent, dynamic>>
-      _fieldsNoObject = <String, FieldReflection<AsyncEvent, dynamic>>{};
+      _fieldsNoObject = {};
 
-  final Map<String, FieldReflection<AsyncEvent, dynamic>> _fieldsObject =
-      <String, FieldReflection<AsyncEvent, dynamic>>{};
+  final Map<String, FieldReflection<AsyncEvent, dynamic>> _fieldsObject = {};
 
   @override
   FieldReflection<AsyncEvent, T>? field<T>(String fieldName,
@@ -247,7 +249,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           (o) => () => o!.channelName,
           null,
           obj,
-          false,
           true,
           const [JsonFieldAlias('channel')],
         );
@@ -261,7 +262,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           (o) => () => o!.id,
           null,
           obj,
-          false,
           true,
         );
       case 'time':
@@ -274,7 +274,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           (o) => () => o!.time,
           null,
           obj,
-          false,
           true,
         );
       case 'type':
@@ -287,7 +286,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           (o) => () => o!.type,
           null,
           obj,
-          false,
           true,
         );
       case 'payload':
@@ -300,7 +298,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           (o) => () => o!.payload,
           null,
           obj,
-          false,
           true,
         );
       case 'hashcode':
@@ -314,12 +311,24 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           null,
           obj,
           false,
-          false,
           const [override],
         );
       default:
         return null;
     }
+  }
+
+  @override
+  Map<String, dynamic> getFieldsValues(AsyncEvent? obj,
+      {bool withHashCode = false}) {
+    return <String, dynamic>{
+      'channelName': obj?.channelName,
+      'id': obj?.id,
+      'time': obj?.time,
+      'type': obj?.type,
+      'payload': obj?.payload,
+      if (withHashCode) 'hashCode': obj?.hashCode,
+    };
   }
 
   static const List<String> _staticFieldsNames = const <String>[];
@@ -328,7 +337,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   List<String> get staticFieldsNames => _staticFieldsNames;
 
   @override
-  FieldReflection<AsyncEvent, T>? staticField<T>(String fieldName) => null;
+  StaticFieldReflection<AsyncEvent, T>? staticField<T>(String fieldName) =>
+      null;
 
   static const List<String> _methodsNames = const <String>[
     'compareTo',
@@ -340,10 +350,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   List<String> get methodsNames => _methodsNames;
 
   static final Map<String, MethodReflection<AsyncEvent, dynamic>>
-      _methodsNoObject = <String, MethodReflection<AsyncEvent, dynamic>>{};
+      _methodsNoObject = {};
 
-  final Map<String, MethodReflection<AsyncEvent, dynamic>> _methodsObject =
-      <String, MethodReflection<AsyncEvent, dynamic>>{};
+  final Map<String, MethodReflection<AsyncEvent, dynamic>> _methodsObject = {};
 
   @override
   MethodReflection<AsyncEvent, R>? method<R>(String methodName,
@@ -399,7 +408,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             false,
             (o) => o!.compareTo,
             obj,
-            false,
             const <__PR>[
               __PR(__TR<AsyncEvent>(AsyncEvent), 'other', false, true)
             ],
@@ -415,7 +423,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             false,
             (o) => o!.toJson,
             obj,
-            false,
             null,
             null,
             const <String, __PR>{
@@ -432,7 +439,6 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             false,
             (o) => o!.toString,
             obj,
-            false,
             null,
             null,
             null,
@@ -447,35 +453,34 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   @override
   List<String> get staticMethodsNames => _staticMethodsNames;
 
-  static final Map<String, MethodReflection<AsyncEvent, dynamic>>
-      _staticMethods = <String, MethodReflection<AsyncEvent, dynamic>>{};
+  static final Map<String, StaticMethodReflection<AsyncEvent, dynamic>>
+      _staticMethods = {};
 
   @override
-  MethodReflection<AsyncEvent, R>? staticMethod<R>(String methodName) {
+  StaticMethodReflection<AsyncEvent, R>? staticMethod<R>(String methodName) {
     var m = _staticMethods[methodName];
     if (m != null) {
-      return m as MethodReflection<AsyncEvent, R>;
+      return m as StaticMethodReflection<AsyncEvent, R>;
     }
     m = _staticMethodImpl(methodName);
     if (m == null) return null;
     _staticMethods[methodName] = m;
-    return m as MethodReflection<AsyncEvent, R>;
+    return m as StaticMethodReflection<AsyncEvent, R>;
   }
 
-  MethodReflection<AsyncEvent, dynamic>? _staticMethodImpl(String methodName) {
+  StaticMethodReflection<AsyncEvent, dynamic>? _staticMethodImpl(
+      String methodName) {
     var lc = methodName.trim().toLowerCase();
 
     switch (lc) {
       case 'boot':
-        return MethodReflection<AsyncEvent, void>(
+        return StaticMethodReflection<AsyncEvent, void>(
             this,
             AsyncEvent,
             'boot',
             __TR.tVoid,
             false,
-            (o) => AsyncEvent.boot,
-            null,
-            true,
+            () => AsyncEvent.boot,
             null,
             null,
             null,
@@ -509,7 +514,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   @override
-  Version get languageVersion => Version.parse('2.18.0');
+  Version get languageVersion => Version.parse('3.0.0');
 
   @override
   AsyncEventID$reflection withObject([AsyncEventID? obj]) =>
@@ -560,7 +565,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   List<String> get constructorsNames => _constructorsNames;
 
   static final Map<String, ConstructorReflection<AsyncEventID>> _constructors =
-      <String, ConstructorReflection<AsyncEventID>>{};
+      {};
 
   @override
   ConstructorReflection<AsyncEventID>? constructor(String constructorName) {
@@ -662,10 +667,9 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   List<String> get fieldsNames => _fieldsNames;
 
   static final Map<String, FieldReflection<AsyncEventID, dynamic>>
-      _fieldsNoObject = <String, FieldReflection<AsyncEventID, dynamic>>{};
+      _fieldsNoObject = {};
 
-  final Map<String, FieldReflection<AsyncEventID, dynamic>> _fieldsObject =
-      <String, FieldReflection<AsyncEventID, dynamic>>{};
+  final Map<String, FieldReflection<AsyncEventID, dynamic>> _fieldsObject = {};
 
   @override
   FieldReflection<AsyncEventID, T>? field<T>(String fieldName,
@@ -722,7 +726,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           (o) => () => o!.epoch,
           null,
           obj,
-          false,
           true,
         );
       case 'serial':
@@ -735,7 +738,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           (o) => () => o!.serial,
           null,
           obj,
-          false,
           true,
         );
       case 'previous':
@@ -749,7 +751,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           null,
           obj,
           false,
-          false,
         );
       case 'next':
         return FieldReflection<AsyncEventID, AsyncEventID?>(
@@ -761,7 +762,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           (o) => () => o!.next,
           null,
           obj,
-          false,
           false,
         );
       case 'hashcode':
@@ -775,12 +775,23 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           null,
           obj,
           false,
-          false,
           const [override],
         );
       default:
         return null;
     }
+  }
+
+  @override
+  Map<String, dynamic> getFieldsValues(AsyncEventID? obj,
+      {bool withHashCode = false}) {
+    return <String, dynamic>{
+      'epoch': obj?.epoch,
+      'serial': obj?.serial,
+      'previous': obj?.previous,
+      'next': obj?.next,
+      if (withHashCode) 'hashCode': obj?.hashCode,
+    };
   }
 
   static const List<String> _staticFieldsNames = const <String>[];
@@ -789,7 +800,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   List<String> get staticFieldsNames => _staticFieldsNames;
 
   @override
-  FieldReflection<AsyncEventID, T>? staticField<T>(String fieldName) => null;
+  StaticFieldReflection<AsyncEventID, T>? staticField<T>(String fieldName) =>
+      null;
 
   static const List<String> _methodsNames = const <String>[
     'compareTo',
@@ -801,10 +813,10 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   List<String> get methodsNames => _methodsNames;
 
   static final Map<String, MethodReflection<AsyncEventID, dynamic>>
-      _methodsNoObject = <String, MethodReflection<AsyncEventID, dynamic>>{};
+      _methodsNoObject = {};
 
   final Map<String, MethodReflection<AsyncEventID, dynamic>> _methodsObject =
-      <String, MethodReflection<AsyncEventID, dynamic>>{};
+      {};
 
   @override
   MethodReflection<AsyncEventID, R>? method<R>(String methodName,
@@ -860,7 +872,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             false,
             (o) => o!.compareTo,
             obj,
-            false,
             const <__PR>[
               __PR(__TR<AsyncEventID>(AsyncEventID), 'other', false, true)
             ],
@@ -876,7 +887,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             false,
             (o) => o!.toJson,
             obj,
-            false,
             null,
             null,
             null,
@@ -890,7 +900,6 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             false,
             (o) => o!.toString,
             obj,
-            false,
             null,
             null,
             null,
@@ -905,36 +914,34 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   @override
   List<String> get staticMethodsNames => _staticMethodsNames;
 
-  static final Map<String, MethodReflection<AsyncEventID, dynamic>>
-      _staticMethods = <String, MethodReflection<AsyncEventID, dynamic>>{};
+  static final Map<String, StaticMethodReflection<AsyncEventID, dynamic>>
+      _staticMethods = {};
 
   @override
-  MethodReflection<AsyncEventID, R>? staticMethod<R>(String methodName) {
+  StaticMethodReflection<AsyncEventID, R>? staticMethod<R>(String methodName) {
     var m = _staticMethods[methodName];
     if (m != null) {
-      return m as MethodReflection<AsyncEventID, R>;
+      return m as StaticMethodReflection<AsyncEventID, R>;
     }
     m = _staticMethodImpl(methodName);
     if (m == null) return null;
     _staticMethods[methodName] = m;
-    return m as MethodReflection<AsyncEventID, R>;
+    return m as StaticMethodReflection<AsyncEventID, R>;
   }
 
-  MethodReflection<AsyncEventID, dynamic>? _staticMethodImpl(
+  StaticMethodReflection<AsyncEventID, dynamic>? _staticMethodImpl(
       String methodName) {
     var lc = methodName.trim().toLowerCase();
 
     switch (lc) {
       case 'boot':
-        return MethodReflection<AsyncEventID, void>(
+        return StaticMethodReflection<AsyncEventID, void>(
             this,
             AsyncEventID,
             'boot',
             __TR.tVoid,
             false,
-            (o) => AsyncEventID.boot,
-            null,
-            true,
+            () => AsyncEventID.boot,
             null,
             null,
             null,

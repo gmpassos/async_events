@@ -1,3 +1,16 @@
+## 1.1.0
+
+- sdk: '>=3.0.0 <4.0.0'
+
+- async_extension: ^1.2.5
+- reflection_factory: ^2.3.0
+- logging: ^1.2.0
+
+- lints: ^3.0.0
+- build_runner: ^2.4.8
+- dependency_validator: ^3.2.3
+- test: ^1.25.2
+
 ## 1.0.12
 
 - `AsyncEventChannel._onNewEvent`:
