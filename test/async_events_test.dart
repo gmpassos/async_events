@@ -151,6 +151,18 @@ Future<void> _doTestBasic(
 
   expect(await storage.last('c1'), eventC1_3);
 
+  expect((await c1.fetch(eventC1_2.id)).where((e) => e.type == 't'),
+      equals([eventC1_2, eventC1_3]));
+
+  expect((await c1.fetch(eventC1_2.id, limit: 3)).where((e) => e.type == 't'),
+      equals([eventC1_2, eventC1_3]));
+
+  expect((await c1.fetch(eventC1_2.id, limit: 2)).where((e) => e.type == 't'),
+      equals([eventC1_3]));
+
+  expect((await c1.fetch(eventC1_2.id, limit: 1)).where((e) => e.type == 't'),
+      equals([eventC1_3]));
+
   var submitAsync = c1.submit('t', {'name': 't6'});
 
   eventPulling.cancelChannelCalls();
@@ -227,7 +239,8 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 
   @override
   Future<List<Map<String, dynamic>>> fetch(
-      String channelName, AsyncEventID fromID) {
+      String channelName, AsyncEventID fromID,
+      {int? limit}) {
     var key = '$channelName>$fromID';
     var count =
         _fetchRequestCounter.update(key, (c) => c + 1, ifAbsent: () => 1);
@@ -237,7 +250,7 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
       throw StateError("Forcing error");
     }
 
-    return super.fetch(channelName, fromID).asFutureDelayed;
+    return super.fetch(channelName, fromID, limit: limit).asFutureDelayed;
   }
 
   @override
