@@ -158,7 +158,8 @@ abstract class AsyncEventStorage {
 
   FutureOr<bool> store(String channelName, AsyncEvent event);
 
-  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID);
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
+      {int? limit});
 
   FutureOr<AsyncEvent?> last(String channelName);
 
@@ -190,9 +191,10 @@ mixin AsyncEventStorageAsJSON {
 
   /// Alias to [storage.fetch].
   FutureOr<List<Map<String, dynamic>>> fetch(
-      String channelName, AsyncEventID fromID) {
+      String channelName, AsyncEventID fromID,
+      {int? limit}) {
     return storage
-        .fetch(channelName, fromID)
+        .fetch(channelName, fromID, limit: limit)
         .resolveMapped((l) => l.map((e) => e.toJson()).toList());
   }
 
@@ -223,8 +225,9 @@ mixin AsyncEventStorageFromJSON {
           (json) => json == null ? null : AsyncEvent.fromJson(json));
 
   /// Calls [storageAsJSON.fetch].
-  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID) =>
-      storageAsJSON.fetch(channelName, fromID).resolveMapped(
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
+          {int? limit}) =>
+      storageAsJSON.fetch(channelName, fromID, limit: limit).resolveMapped(
           (l) => l.map((json) => AsyncEvent.fromJson(json)).toList());
 
   /// Calls [storageAsJSON.lastID].
@@ -270,14 +273,19 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   }
 
   @override
-  List<AsyncEvent> fetch(String channelName, AsyncEventID fromID) {
+  List<AsyncEvent> fetch(String channelName, AsyncEventID fromID,
+      {int? limit}) {
     var list = _channelsEvents[channelName];
     if (list == null || list.isEmpty) return <AsyncEvent>[];
 
     var sel = list.where((e) => e.id >= fromID).toList();
 
+    if (limit != null && limit > 0 && sel.length > limit) {
+      sel = sel.sublist(sel.length - limit);
+    }
+
     _logMemory.info(
-        "CHANNEL[$channelName] Fetch events> fromID: $fromID >> events: ${sel.length}");
+        "CHANNEL[$channelName] Fetch events> fromID: $fromID ; limit: $limit >> events: ${sel.length}");
 
     return sel;
   }
@@ -362,8 +370,9 @@ class AsyncEventStorageRemote extends AsyncEventStorage with AsyncCaller {
   }
 
   @override
-  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID) =>
-      call(() => client.fetch(channelName, fromID),
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
+          {int? limit}) =>
+      call(() => client.fetch(channelName, fromID, limit: limit),
           methodName: '$channelName/fetch',
           maxRetries: 5,
           errorValue: <AsyncEvent>[]);
@@ -422,7 +431,8 @@ abstract class AsyncEventStorageClient {
       String channelName, String type, Map<String, dynamic> payload);
 
   /// Calls [AsyncEventStorage.fetch].
-  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID);
+  FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
+      {int? limit});
 
   /// Calls [AsyncEventStorage.lastID].
   FutureOr<AsyncEventID?> lastID(String channelName);

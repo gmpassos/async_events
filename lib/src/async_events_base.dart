@@ -153,7 +153,7 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   /// The ID of this event.
   final AsyncEventID id;
 
-  /// The submit time of this event.
+  /// The submission time of this event.
   final DateTime time;
 
   /// The type of this event.
@@ -239,8 +239,8 @@ class AsyncEventHub {
       storage.newEvent(channel.name, type, payload);
 
   FutureOr<List<AsyncEvent>> _fetch(
-          AsyncEventChannel channel, AsyncEventID fromID) =>
-      storage.fetch(channel.name, fromID);
+          AsyncEventChannel channel, AsyncEventID fromID, int? limit) =>
+      storage.fetch(channel.name, fromID, limit: limit);
 
   /// Pull new events from storage.
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) =>
@@ -397,15 +397,15 @@ class AsyncEventChannel with WithLastEventID {
   }
 
   /// Fetches events of this channel starting [fromID].
-  FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID) =>
-      hub._fetch(this, fromID);
+  FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID, {int? limit}) =>
+      hub._fetch(this, fromID, limit);
 
   /// Fetches events of this channel starting [fromID] with a [timeout].
   FutureOr<List<AsyncEvent>> fetchDelayed(AsyncEventID fromID,
-      {Duration timeout = const Duration(seconds: 1)}) {
+      {Duration timeout = const Duration(seconds: 1), int? limit}) {
     if (timeout.inMilliseconds <= 0) return fetch(fromID);
 
-    return fetch(fromID).resolveMapped((events) {
+    return fetch(fromID, limit: limit).resolveMapped((events) {
       if (events.isNotEmpty) {
         return events;
       }
@@ -414,7 +414,7 @@ class AsyncEventChannel with WithLastEventID {
         // Ensure that the `fetch` happens after any
         // `Future` already scheduled that can populate
         // more events:
-        return Future.microtask(() => fetch(fromID));
+        return Future.microtask(() => fetch(fromID, limit: limit));
       });
     });
   }

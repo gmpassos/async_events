@@ -1,3 +1,11 @@
+## 1.1.1
+
+- `AsyncEventChannel`, `AsyncEventStorage`:
+  - `fetch`: added parameter `limit`.
+
+- async_extension: ^1.2.12
+- reflection_factory: ^2.3.4
+
 ## 1.1.0
 
 - sdk: '>=3.0.0 <4.0.0'

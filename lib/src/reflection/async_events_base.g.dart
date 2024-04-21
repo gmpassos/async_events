@@ -1,6 +1,6 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/2.3.0
+// BUILDER: reflection_factory/2.3.4
 // BUILD COMMAND: dart run build_runner build
 //
 
@@ -20,7 +20,7 @@ typedef __TI<T> = TypeInfo<T>;
 typedef __PR = ParameterReflection;
 
 mixin __ReflectionMixin {
-  static final Version _version = Version.parse('2.3.0');
+  static final Version _version = Version.parse('2.3.4');
 
   Version get reflectionFactoryVersion => _version;
 
@@ -321,6 +321,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   @override
   Map<String, dynamic> getFieldsValues(AsyncEvent? obj,
       {bool withHashCode = false}) {
+    obj ??= object;
     return <String, dynamic>{
       'channelName': obj?.channelName,
       'id': obj?.id,
@@ -785,6 +786,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   @override
   Map<String, dynamic> getFieldsValues(AsyncEventID? obj,
       {bool withHashCode = false}) {
+    obj ??= object;
     return <String, dynamic>{
       'epoch': obj?.epoch,
       'serial': obj?.serial,
