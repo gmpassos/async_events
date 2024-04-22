@@ -232,8 +232,9 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 
   @override
   Future<Map<String, dynamic>?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload) =>
-      super.newEvent(channelName, type, payload).asFutureDelayed;
+          String channelName, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      super.newEvent(channelName, type, payload, time: time).asFutureDelayed;
 
   final Map<String, int> _fetchRequestCounter = <String, int>{};
 
@@ -262,7 +263,15 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
       super.last(channelName).asFutureDelayed;
 
   @override
-  Future<int> purge(int untilEpoch) => super.purge(untilEpoch).asFutureDelayed;
+  Future<int> purgeEpochs(int untilEpoch) =>
+      super.purgeEpochs(untilEpoch).asFutureDelayed;
+
+  @override
+  Future<int> purgeEvents(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      super
+          .purgeEvents(channelName, untilID: untilID, before: before, all: all)
+          .asFutureDelayed;
 
   @override
   String toString() {

@@ -103,6 +103,30 @@ class AsyncEventID implements Comparable<AsyncEventID> {
     return '$epoch#$serial';
   }
 
+  static AsyncEventID? tryParse(String? s) {
+    if (s == null) return null;
+
+    s = s.trim();
+    if (s.isEmpty) return null;
+
+    var idx = s.indexOf('#');
+    if (idx <= 0) {
+      return null;
+    }
+
+    var epochStr = s.substring(0, idx);
+    var serialStr = s.substring(idx + 1);
+
+    var epoch = int.tryParse(epochStr);
+    var serial = int.tryParse(serialStr);
+
+    if (epoch == null || serial == null) {
+      return null;
+    }
+
+    return AsyncEventID(epoch, serial);
+  }
+
   factory AsyncEventID.parse(String s) {
     s = s.trim();
     var idx = s.indexOf('#');
@@ -202,6 +226,61 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   }
 }
 
+extension ListAsyncEventExtension on List<AsyncEvent> {
+  bool insertSorted(AsyncEvent event) {
+    final length = this.length;
+
+    if (length == 0) {
+      add(event);
+      return true;
+    } else if (length == 1) {
+      final first = this.first;
+      final cmp = event.compareTo(first);
+
+      if (cmp < 0) {
+        insert(0, event);
+        return true;
+      } else if (cmp > 0) {
+        add(event);
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      final last = this.last;
+      final cmpLast = event.compareTo(last);
+
+      if (cmpLast == 0) {
+        return false;
+      } else if (cmpLast > 0) {
+        add(event);
+        return true;
+      }
+
+      final first = this.first;
+      final cmpFirst = event.compareTo(first);
+
+      if (cmpFirst == 0) {
+        return false;
+      } else if (cmpFirst < 0) {
+        insert(0, event);
+        return true;
+      }
+
+      var insertIdx = this.lowerBound(event, (p0, p1) => p0.compareTo(p1));
+
+      var elem = this[insertIdx];
+
+      if (event.compareTo(elem) != 0) {
+        insert(insertIdx, event);
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+}
+
 typedef AsyncEventMatcher = bool Function(AsyncEvent event);
 
 /// An [AsyncEvent] hub.
@@ -234,9 +313,10 @@ class AsyncEventHub {
   /// The current epoch of the [storage].
   FutureOr<int> get epoch => storage.epoch;
 
-  FutureOr<AsyncEvent?> _submit(AsyncEventChannel channel, String type,
-          Map<String, dynamic> payload) =>
-      storage.newEvent(channel.name, type, payload);
+  FutureOr<AsyncEvent?> _submit(
+          AsyncEventChannel channel, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      storage.newEvent(channel.name, type, payload, time: time);
 
   FutureOr<List<AsyncEvent>> _fetch(
           AsyncEventChannel channel, AsyncEventID fromID, int? limit) =>
@@ -245,6 +325,12 @@ class AsyncEventHub {
   /// Pull new events from storage.
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) =>
       storage.pull(channelName, fromID);
+
+  /// Purge events and create a new epoch from the remaining events.
+  FutureOr<int> purge(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      storage.purgeEvents(channelName,
+          untilID: untilID, before: before, all: all);
 
   /// Cancels channel with [channelName] calls.
   void cancelChannelCalls(String channelName) =>
@@ -371,8 +457,9 @@ class AsyncEventChannel with WithLastEventID {
       _subscriptionsGroups.contains(subscriptionGroup);
 
   /// Submits and broadcast an event to this channel.
-  FutureOr<AsyncEvent?> submit(String type, Map<String, dynamic> payload) =>
-      hub._submit(this, type, payload);
+  FutureOr<AsyncEvent?> submit(String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      hub._submit(this, type, payload, time: time);
 
   final Map<AsyncEventPullingConfig, AsyncEventPulling> _pullingByConfig =
       <AsyncEventPullingConfig, AsyncEventPulling>{};
@@ -395,6 +482,10 @@ class AsyncEventChannel with WithLastEventID {
 
     return eventPulling;
   }
+
+  FutureOr<int> purge(
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      hub.purge(name, untilID: untilID, before: before, all: all);
 
   /// Fetches events of this channel starting [fromID].
   FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID, {int? limit}) =>
@@ -465,35 +556,60 @@ class AsyncEventChannel with WithLastEventID {
     }
   }
 
-  void _addToUnflushedEvents(AsyncEvent event) {
-    var unflushedEvents = _unflushedEvents ??= <AsyncEvent>[];
-    unflushedEvents.add(event);
+  bool _addToUnflushedEvents(AsyncEvent event) {
+    var unflushedEvents = _unflushedEvents;
+
+    if (unflushedEvents == null) {
+      _unflushedEvents = [event];
+      return true;
+    }
+
+    return unflushedEvents.insertSorted(event);
   }
 
   bool _processEvent(AsyncEvent event, {bool fromUnflushedEvents = false}) {
     if (!fromUnflushedEvents && hasUnflushedEvents) {
       if (!_flushEvents()) {
         _addToUnflushedEvents(event);
+        return false;
       }
     }
 
-    if (event.id.serial == 0) {
+    final eventID = event.id;
+
+    // New epoch event:
+    if (eventID.serial == 0) {
       var processed = _processNewEpochEvent(event, fromUnflushedEvents);
 
       if (processed) {
-        _logChannel.info("New epoch: ${event.id.epoch} ; $event");
+        _logChannel.info("New epoch: ${eventID.epoch} ; $event");
       }
 
       return processed;
     }
+    // Limit cut event:
+    else if (eventID.serial == -1 &&
+        eventID.epoch == 0 &&
+        event.type == 'limit') {
+      var nextEventIDStr = event.payload['nextID'];
+      var nextEventID = AsyncEventID.tryParse(nextEventIDStr);
+
+      var previousEventID = nextEventID?.previous;
+
+      if (previousEventID != null) {
+        lastEventID = previousEventID;
+      }
+
+      return true;
+    }
 
     // Ignore old event:
-    if (!isAfterLastEventID(event.id)) {
+    if (!isAfterLastEventID(eventID)) {
       return true;
     }
 
     // Out of sync event:
-    if (!isNextEventID(event.id)) {
+    if (!isNextEventID(eventID)) {
       if (!fromUnflushedEvents) {
         _addToUnflushedEvents(event);
       }
@@ -501,7 +617,7 @@ class AsyncEventChannel with WithLastEventID {
     }
 
     // Normal sequence (process it):
-    _lastEventID = event.id;
+    _lastEventID = eventID;
 
     _onNewEvent(event);
 
@@ -516,8 +632,7 @@ class AsyncEventChannel with WithLastEventID {
     var eventID = event.id;
 
     var previousIDStr = event.payload['previousID'];
-    var previousID =
-        previousIDStr != null ? AsyncEventID.parse(previousIDStr) : null;
+    var previousID = AsyncEventID.tryParse(previousIDStr);
 
     var lastEventID = _lastEventID;
 
@@ -530,39 +645,54 @@ class AsyncEventChannel with WithLastEventID {
     }
 
     if (previousID == null) {
+      var nextIDStr = event.payload['nextID'];
+      var nextID = AsyncEventID.tryParse(nextIDStr);
+
+      var nextPrevious = nextID?.previous;
+
       if (lastEpoch < eventID.epoch) {
-        _lastEventID = eventID;
+        assert(nextPrevious == null || lastEpoch < nextPrevious.epoch);
+        _lastEventID = nextPrevious ?? eventID;
         return true;
       } else if (lastEpoch == eventID.epoch) {
+        assert(nextPrevious == null || lastEpoch == nextPrevious.epoch);
+
         if (lastSerial <= 0) {
-          _lastEventID = eventID;
+          _lastEventID = nextPrevious ?? eventID;
+        } else if (nextPrevious != null && lastSerial < nextPrevious.serial) {
+          _lastEventID = nextPrevious;
         }
 
         return true;
       } else {
+        if (nextPrevious != null) {
+          _lastEventID = nextPrevious;
+          return true;
+        } else {
+          _logChannel.warning(
+              "New epoch event out of sync> lastEventID: $lastEventID ; event: $event");
+          return false;
+        }
+      }
+    } else {
+      // Normal sequence:
+      if (lastEventID == previousID) {
+        _lastEventID = eventID;
+        return true;
+      }
+      // Events already in future from previousID:
+      else if (lastEpoch > previousID.epoch) {
         _logChannel.warning(
-            "New epoch event out of sync> lastEventID: $lastEventID ; event: $event");
+            "New epoch event out of sync> lastEventID: $lastEventID ; event: $event ; previousID: $previousID");
         return false;
       }
-    }
-
-    // Normal sequence:
-    if (lastEventID == previousID) {
-      _lastEventID = eventID;
-      return true;
-    }
-    // Events already in future from previousID:
-    else if (lastEpoch > previousID.epoch) {
-      _logChannel.warning(
-          "New epoch event out of sync> lastEventID: $lastEventID ; event: $event ; previousID: $previousID");
-      return false;
-    }
-    // Out of order:
-    else {
-      if (!fromUnflushedEvents) {
-        _addToUnflushedEvents(event);
+      // Out of order:
+      else {
+        if (!fromUnflushedEvents) {
+          _addToUnflushedEvents(event);
+        }
+        return true;
       }
-      return true;
     }
   }
 
