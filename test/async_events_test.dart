@@ -233,6 +233,26 @@ Future<void> _doTestBasic(
 
   expect(await c1.purge(untilID: eventC1_2.id), equals(2));
 
+  expect(await eventPulling.pull(), equals(0));
+
+  expect(eventPulling.isPulling, isFalse);
+
+  expect(c1Events.map((e) => '${e.id}${e.payload}'),
+      equals(['0#1{name: t1}', '0#2{name: t4}', '1#1{name: t5}']));
+
+  expect(await c1.submit('t', {'name': 't5.2'}), isNotNull);
+
+  expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(
+      c1Events.map((e) => '${e.id}${e.payload}'),
+      equals([
+        '0#1{name: t1}',
+        '0#2{name: t4}',
+        '1#1{name: t5}',
+        '1#2{name: t5.2}'
+      ]));
+
   expect(
       (await c1.fetch(AsyncEventID.any()))
           .map((e) => '${e.id}${e.payload}')
@@ -241,7 +261,8 @@ Future<void> _doTestBasic(
         '0#0{nextID: 0#2}',
         '0#2{name: t4}',
         '1#0{previousID: 0#2}',
-        '1#1{name: t5}'
+        '1#1{name: t5}',
+        '1#2{name: t5.2}'
       ]));
 
   var submitAsync = c1.submit('t', {'name': 't6'});
