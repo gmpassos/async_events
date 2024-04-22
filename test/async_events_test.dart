@@ -14,6 +14,55 @@ void main() {
       .listen((event) => print('${DateTime.now()}\t$event'));
 
   group('AsyncEvent', () {
+    test('insertSorted', () async {
+      {
+        var l0 = <AsyncEvent>[];
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}));
+
+        expect(l0.map((e) => e.id.toString()), equals(['0#2', '0#3']));
+      }
+
+      {
+        var l0 = <AsyncEvent>[];
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+
+        expect(l0.map((e) => e.id.toString()), equals(['0#1', '0#2']));
+      }
+
+      var l1 = <AsyncEvent>[
+        AsyncEvent('a', AsyncEventID(0, 0), DateTime.now(), 'new_epoch', {}),
+        AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}),
+        AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}),
+        AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}),
+      ];
+
+      l1.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 4), DateTime.now(), 't', {'n': 4}));
+
+      expect(l1.map((e) => e.id.toString()),
+          equals(['0#0', '0#1', '0#2', '0#3', '0#4']));
+
+      var l2 = l1.sublist(2);
+
+      expect(l2.map((e) => e.id.toString()), equals(['0#2', '0#3', '0#4']));
+
+      l2.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+
+      expect(
+          l2.map((e) => e.id.toString()), equals(['0#1', '0#2', '0#3', '0#4']));
+    });
+
     test('json', () async {
       var now = DateTime.now();
 
