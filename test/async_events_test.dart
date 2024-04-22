@@ -14,6 +14,62 @@ void main() {
       .listen((event) => print('${DateTime.now()}\t$event'));
 
   group('AsyncEvent', () {
+    test('insertSorted', () async {
+      {
+        var l0 = <AsyncEvent>[];
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}));
+
+        expect(l0.map((e) => e.id.toString()), equals(['0#2', '0#3']));
+      }
+
+      {
+        var l0 = <AsyncEvent>[];
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+
+        l0.insertSorted(
+            AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+
+        expect(l0.map((e) => e.id.toString()), equals(['0#1', '0#2']));
+      }
+
+      var l1 = <AsyncEvent>[
+        AsyncEvent('a', AsyncEventID(0, 0), DateTime.now(), 'new_epoch', {}),
+        AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}),
+        AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}),
+        AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}),
+      ];
+
+      l1.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 5), DateTime.now(), 't', {'n': 5}));
+
+      expect(l1.map((e) => e.id.toString()),
+          equals(['0#0', '0#1', '0#2', '0#3', '0#5']));
+
+      l1.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 4), DateTime.now(), 't', {'n': 4}));
+
+      expect(l1.map((e) => e.id.toString()),
+          equals(['0#0', '0#1', '0#2', '0#3', '0#4', '0#5']));
+
+      var l2 = l1.sublist(2);
+
+      expect(
+          l2.map((e) => e.id.toString()), equals(['0#2', '0#3', '0#4', '0#5']));
+
+      l2.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+
+      expect(l2.map((e) => e.id.toString()),
+          equals(['0#1', '0#2', '0#3', '0#4', '0#5']));
+    });
+
     test('json', () async {
       var now = DateTime.now();
 
@@ -163,6 +219,52 @@ Future<void> _doTestBasic(
   expect((await c1.fetch(eventC1_2.id, limit: 1)).where((e) => e.type == 't'),
       equals([eventC1_3]));
 
+  expect(
+      (await c1.fetch(AsyncEventID.any()))
+          .map((e) => '${e.id}${e.payload}')
+          .toList(),
+      equals([
+        '0#0{}',
+        '0#1{name: t1}',
+        '0#2{name: t4}',
+        '1#0{previousID: 0#2}',
+        '1#1{name: t5}'
+      ]));
+
+  expect(await c1.purge(untilID: eventC1_2.id), equals(2));
+
+  expect(await eventPulling.pull(), equals(0));
+
+  expect(eventPulling.isPulling, isFalse);
+
+  expect(c1Events.map((e) => '${e.id}${e.payload}'),
+      equals(['0#1{name: t1}', '0#2{name: t4}', '1#1{name: t5}']));
+
+  expect(await c1.submit('t', {'name': 't5.2'}), isNotNull);
+
+  expect(await eventPulling.waitPulling(), isTrue);
+
+  expect(
+      c1Events.map((e) => '${e.id}${e.payload}'),
+      equals([
+        '0#1{name: t1}',
+        '0#2{name: t4}',
+        '1#1{name: t5}',
+        '1#2{name: t5.2}'
+      ]));
+
+  expect(
+      (await c1.fetch(AsyncEventID.any()))
+          .map((e) => '${e.id}${e.payload}')
+          .toList(),
+      equals([
+        '0#0{nextID: 0#2}',
+        '0#2{name: t4}',
+        '1#0{previousID: 0#2}',
+        '1#1{name: t5}',
+        '1#2{name: t5.2}'
+      ]));
+
   var submitAsync = c1.submit('t', {'name': 't6'});
 
   eventPulling.cancelChannelCalls();
@@ -189,6 +291,65 @@ Future<void> _doTestBasic(
   expect(sub2b.isSubscribed, isTrue);
   sub2b.cancel();
   expect(sub1.isSubscribed, isFalse);
+
+  {
+    var hub2 = AsyncEventHub('test2', hub.storage);
+    var c1b = hub2.channel('c1');
+
+    var c1bEvents = <AsyncEvent>[];
+
+    var sub1b = await c1b.subscribe((e) {
+      c1bEvents.add(e);
+      log.info('C1B>> $e');
+    });
+
+    expect(c1bEvents, equals([]));
+
+    expect(await c1b.pull(), greaterThanOrEqualTo(6));
+
+    expect(
+        c1bEvents.map((e) => '${e.id}${e.payload}'),
+        anyOf(
+          equals([
+            '0#2{name: t4}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '1#3{name: t6}'
+          ]),
+          equals([
+            '0#2{name: t4}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '2#1{name: t6}'
+          ]),
+        ));
+
+    expect(
+        (await c1.fetch(AsyncEventID.any())).map((e) => '${e.id}${e.payload}'),
+        anyOf(
+          equals([
+            '0#0{nextID: 0#2}',
+            '0#2{name: t4}',
+            '1#0{previousID: 0#2}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '1#3{name: t6}'
+          ]),
+          equals([
+            '0#0{nextID: 0#2}',
+            '0#2{name: t4}',
+            '1#0{previousID: 0#2}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '2#0{previousID: 1#2}',
+            '2#1{name: t6}'
+          ]),
+        ));
+
+    expect(sub1b.isSubscribed, isTrue);
+    sub1b.cancel();
+    expect(sub1b.isSubscribed, isFalse);
+  }
 
   expect(
       await storage.last('c1'),
@@ -232,8 +393,9 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 
   @override
   Future<Map<String, dynamic>?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload) =>
-      super.newEvent(channelName, type, payload).asFutureDelayed;
+          String channelName, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      super.newEvent(channelName, type, payload, time: time).asFutureDelayed;
 
   final Map<String, int> _fetchRequestCounter = <String, int>{};
 
@@ -262,7 +424,15 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
       super.last(channelName).asFutureDelayed;
 
   @override
-  Future<int> purge(int untilEpoch) => super.purge(untilEpoch).asFutureDelayed;
+  Future<int> purgeEpochs(int untilEpoch) =>
+      super.purgeEpochs(untilEpoch).asFutureDelayed;
+
+  @override
+  Future<int> purgeEvents(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      super
+          .purgeEvents(channelName, untilID: untilID, before: before, all: all)
+          .asFutureDelayed;
 
   @override
   String toString() {

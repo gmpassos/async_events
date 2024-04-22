@@ -1,3 +1,19 @@
+## 1.2.0
+
+- `AsyncEventID`: added `tryParse`.
+
+- `AsyncEventHub`: added `purge`.
+
+- `AsyncEventChannel`:
+  - Added `purge`.
+  - `submit`: added parameter `time`.
+
+- `AsyncEventStorage`:
+  - Rename `purge` to `purgeEpochs`.
+  - Added `purgeEvents`.
+
+- Fix channel initial synchronization when using `limit`.
+
 ## 1.1.1
 
 - `AsyncEventChannel`, `AsyncEventStorage`:

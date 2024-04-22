@@ -911,7 +911,10 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
     }
   }
 
-  static const List<String> _staticMethodsNames = const <String>['boot'];
+  static const List<String> _staticMethodsNames = const <String>[
+    'boot',
+    'tryParse'
+  ];
 
   @override
   List<String> get staticMethodsNames => _staticMethodsNames;
@@ -945,6 +948,18 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             false,
             () => AsyncEventID.boot,
             null,
+            null,
+            null,
+            null);
+      case 'tryparse':
+        return StaticMethodReflection<AsyncEventID, AsyncEventID?>(
+            this,
+            AsyncEventID,
+            'tryParse',
+            __TR<AsyncEventID>(AsyncEventID),
+            true,
+            () => AsyncEventID.tryParse,
+            const <__PR>[__PR(__TR.tString, 's', true, true)],
             null,
             null,
             null);

@@ -70,15 +70,18 @@ abstract class AsyncEventStorage {
   }
 
   FutureOr<AsyncEvent> _nextEvent(
-      String channelName, String type, Map<String, dynamic> payload) {
+      String channelName, String type, Map<String, dynamic> payload,
+      {DateTime? time}) {
     return _nextEventID(channelName).resolveMapped((nextID) {
       var id = nextID.key;
       var prevID = nextID.value;
 
-      var event = AsyncEvent(channelName, id, currentTime, type, payload);
+      var timeResolved = _resolveNewEventTime(channelName, time);
+
+      var event = AsyncEvent(channelName, id, timeResolved, type, payload);
 
       if (id.serial == 1) {
-        return _newEpochEvent(channelName, id.epoch, prevID)
+        return _newEpochEvent(channelName, id.epoch, prevID, timeResolved)
             .resolveWith(() => event);
       } else {
         return event;
@@ -86,9 +89,31 @@ abstract class AsyncEventStorage {
     });
   }
 
+  final Map<String, DateTime> _channelsMaxTime = <String, DateTime>{};
+
+  DateTime _resolveNewEventTime(String channelName, DateTime? time) {
+    if (time == null) {
+      time = currentTime;
+      _channelsMaxTime[channelName] = time;
+      return time;
+    }
+
+    var maxTime = _channelsMaxTime[channelName];
+
+    if (maxTime != null && time.compareTo(maxTime) < 0) {
+      time = maxTime;
+    } else {
+      _channelsMaxTime[channelName] = time;
+    }
+
+    return time;
+  }
+
   FutureOr<AsyncEvent?> newEvent(
-      String channelName, String type, Map<String, dynamic> payload) {
-    return _nextEvent(channelName, type, payload).resolveMapped((event) {
+      String channelName, String type, Map<String, dynamic> payload,
+      {DateTime? time}) {
+    return _nextEvent(channelName, type, payload, time: time)
+        .resolveMapped((event) {
       return store(channelName, event).resolveMapped((ok) {
         if (!ok) {
           _log.warning("Error storing event: $event");
@@ -101,11 +126,13 @@ abstract class AsyncEventStorage {
   }
 
   FutureOr<AsyncEvent?> _newEpochEvent(
-      String channelName, int epoch, AsyncEventID? previousID) {
+      String channelName, int epoch, AsyncEventID? previousID, DateTime? time) {
     var id = AsyncEventID(epoch, 0);
 
+    var timeResolved = _resolveNewEventTime(channelName, time);
+
     var event = AsyncEvent(
-        channelName, id, currentTime, 'new_epoch', <String, dynamic>{
+        channelName, id, timeResolved, 'new_epoch', <String, dynamic>{
       if (previousID != null) 'previousID': previousID.toString()
     });
 
@@ -166,7 +193,10 @@ abstract class AsyncEventStorage {
   FutureOr<AsyncEventID?> lastID(String channelName) =>
       last(channelName).resolveMapped((event) => event?.id);
 
-  FutureOr<int> purge(int untilEpoch);
+  FutureOr<int> purgeEpochs(int untilEpoch);
+
+  FutureOr<int> purgeEvents(String channelName,
+      {AsyncEventID? untilID, DateTime? before, bool all = false});
 
   FutureOr<int> pull(String channelName, AsyncEventID? fromID);
 
@@ -184,9 +214,10 @@ mixin AsyncEventStorageAsJSON {
 
   /// Alias to [storage.newEvent].
   FutureOr<Map<String, dynamic>?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload) =>
+          String channelName, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
       storage
-          .newEvent(channelName, type, payload)
+          .newEvent(channelName, type, payload, time: time)
           .resolveMapped((event) => event?.toJson());
 
   /// Alias to [storage.fetch].
@@ -206,8 +237,14 @@ mixin AsyncEventStorageAsJSON {
   FutureOr<Map<String, dynamic>?> last(String channelName) =>
       storage.last(channelName).resolveMapped((event) => event?.toJson());
 
-  /// Alias to [storage.purge].
-  FutureOr<int> purge(int untilEpoch) => storage.purge(untilEpoch);
+  /// Alias to [storage.purgeEpochs].
+  FutureOr<int> purgeEpochs(int untilEpoch) => storage.purgeEpochs(untilEpoch);
+
+  /// Alias to [storage.purgeEvents].
+  FutureOr<int> purgeEvents(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      storage.purgeEvents(channelName,
+          untilID: untilID, before: before, all: all);
 }
 
 /// Wraps an [AsyncEventStorageAsJSON] instance converting JSON results int objects.
@@ -220,9 +257,12 @@ mixin AsyncEventStorageFromJSON {
 
   /// Calls [storageAsJSON.newEvent].
   FutureOr<AsyncEvent?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload) =>
-      storageAsJSON.newEvent(channelName, type, payload).resolveMapped(
-          (json) => json == null ? null : AsyncEvent.fromJson(json));
+          String channelName, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      storageAsJSON
+          .newEvent(channelName, type, payload, time: time)
+          .resolveMapped(
+              (json) => json == null ? null : AsyncEvent.fromJson(json));
 
   /// Calls [storageAsJSON.fetch].
   FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
@@ -240,8 +280,15 @@ mixin AsyncEventStorageFromJSON {
       .last(channelName)
       .resolveMapped((json) => json == null ? null : AsyncEvent.fromJson(json));
 
-  /// Calls [storageAsJSON.purge].
-  FutureOr<int> purge(int untilEpoch) => storageAsJSON.purge(untilEpoch);
+  /// Calls [storageAsJSON.purgeEpochs].
+  FutureOr<int> purgeEpochs(int untilEpoch) =>
+      storageAsJSON.purgeEpochs(untilEpoch);
+
+  /// Calls [storageAsJSON.purgeEvents].
+  FutureOr<int> purgeEvents(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      storageAsJSON.purgeEvents(channelName,
+          untilID: untilID, before: before, all: all);
 }
 
 final _logMemory = logging.Logger('AsyncEventStorageMemory');
@@ -265,11 +312,15 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   @override
   bool store(String channelName, AsyncEvent event) {
     var list = _channelsEvents.putIfAbsent(channelName, () => <AsyncEvent>[]);
-    list.add(event);
 
-    _logMemory.info("CHANNEL[$channelName] Stored event> $event");
+    var stored = list.insertSorted(event);
 
-    return true;
+    if (stored) {
+      _logMemory.info("CHANNEL[$channelName] Stored event> $event");
+      return true;
+    } else {
+      return false;
+    }
   }
 
   @override
@@ -282,6 +333,18 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
 
     if (limit != null && limit > 0 && sel.length > limit) {
       sel = sel.sublist(sel.length - limit);
+
+      var nextEvent = sel.first;
+
+      var limitEvent = AsyncEvent(
+        channelName,
+        AsyncEventID.any(),
+        DateTime.now(),
+        'limit',
+        {'nextID': nextEvent.id.toString()},
+      );
+
+      sel.insert(0, limitEvent);
     }
 
     _logMemory.info(
@@ -303,23 +366,130 @@ class AsyncEventStorageMemory extends AsyncEventStorage {
   }
 
   @override
-  int purge(int untilEpoch) {
-    var totalDel = 0;
+  int purgeEpochs(int untilEpoch) =>
+      _purgeImpl((e) => e.id.epoch <= untilEpoch);
 
-    for (var e in _channelsEvents.entries) {
-      var c = e.key;
-      var l = e.value;
-      var sz = l.length;
-      l.removeWhere((e) => e.id.epoch <= untilEpoch);
-      var del = l.length - sz;
-      totalDel += del;
+  @override
+  FutureOr<int> purgeEvents(String channelName,
+      {AsyncEventID? untilID, DateTime? before, bool all = false}) {
+    if (all) {
+      return lastID(channelName).resolveMapped((lastID) {
+        if (lastID == null || lastID.serial == 0) return 0;
 
-      _logMemory.info("CHANNEL[$c] Purge> removed events: $del");
+        return _newEpochEvent(channelName, lastID.epoch + 1, lastID, null)
+            .resolveMapped((epochEvent) {
+          if (epochEvent == null) return 0;
+          return purgeEpochs(epochEvent.id.epoch - 1);
+        });
+      });
     }
 
-    _logMemory.info("Purge> total removed events: $totalDel");
+    if (untilID != null) {
+      if (untilID.serial == 0) {
+        final previousEpoch = untilID.epoch - 1;
+
+        return _purgeImpl(
+          channelName: channelName,
+          (e) => e.id.epoch <= previousEpoch,
+          insertPurgeEvent: true,
+          desc: ' < `$untilID`',
+        );
+      }
+
+      return _purgeImpl(
+        channelName: channelName,
+        (e) => e.id.compareTo(untilID) < 0,
+        insertPurgeEvent: true,
+        desc: ' < `$untilID`',
+      );
+    } else if (before != null) {
+      return _purgeImpl(
+        channelName: channelName,
+        (e) => e.time.compareTo(before) < 0,
+        insertPurgeEvent: true,
+        desc: ' < `$before`',
+      );
+    } else {
+      return 0;
+    }
+  }
+
+  int _purgeImpl(bool Function(AsyncEvent event) remove,
+      {String? channelName, String desc = '', bool insertPurgeEvent = false}) {
+    var totalDel = 0;
+
+    if (channelName != null) {
+      var l = _channelsEvents[channelName];
+      if (l != null) {
+        var del = _purgeChannelImpl(
+          channelName,
+          l,
+          remove,
+          desc,
+          insertPurgeEvent,
+        );
+
+        totalDel += del;
+      }
+    } else {
+      for (var e in _channelsEvents.entries) {
+        var c = e.key;
+        var l = e.value;
+
+        var del = _purgeChannelImpl(
+          c,
+          l,
+          remove,
+          desc,
+          insertPurgeEvent,
+        );
+
+        totalDel += del;
+      }
+    }
+
+    _logMemory.info("Purge> total removed events$desc: $totalDel");
 
     return totalDel;
+  }
+
+  int _purgeChannelImpl(
+      String channelName,
+      List<AsyncEvent> channelEvents,
+      bool Function(AsyncEvent event) remove,
+      String desc,
+      bool insertPurgeEvent) {
+    var lastEvent = channelEvents.isNotEmpty ? channelEvents.last : null;
+
+    var sz = channelEvents.length;
+
+    channelEvents.removeWhere(remove);
+
+    // Can't fully clean the channel to avoid serial sequence issues:
+    if (channelEvents.isEmpty && lastEvent != null) {
+      channelEvents.add(lastEvent);
+    }
+
+    var del = sz - channelEvents.length;
+
+    _logMemory.info("CHANNEL[$channelName] Purge> removed events$desc: $del");
+
+    if (insertPurgeEvent && del > 0 && channelEvents.isNotEmpty) {
+      var nextEvent = channelEvents.first;
+      var nextEventID = nextEvent.id;
+
+      var purgeEvent = AsyncEvent(
+        nextEvent.channelName,
+        AsyncEventID(nextEventID.epoch, 0),
+        nextEvent.time,
+        'purge',
+        {'nextID': nextEventID.toString()},
+      );
+
+      channelEvents.insert(0, purgeEvent);
+    }
+
+    return del;
   }
 
   @override
@@ -358,8 +528,9 @@ class AsyncEventStorageRemote extends AsyncEventStorage with AsyncCaller {
 
   @override
   FutureOr<AsyncEvent?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload) =>
-      call(() => client.newEvent(channelName, type, payload),
+          String channelName, String type, Map<String, dynamic> payload,
+          {DateTime? time}) =>
+      call(() => client.newEvent(channelName, type, payload, time: time),
           methodName: '$channelName/newEvent', nullErrorValue: true);
 
   @override
@@ -388,8 +559,18 @@ class AsyncEventStorageRemote extends AsyncEventStorage with AsyncCaller {
           methodName: '$channelName/last', maxRetries: 5);
 
   @override
-  FutureOr<int> purge(int untilEpoch) =>
-      call(() => client.purge(untilEpoch), methodName: 'purge', maxRetries: 5);
+  FutureOr<int> purgeEpochs(int untilEpoch) =>
+      call(() => client.purgeEpochs(untilEpoch),
+          methodName: 'purgeEpochs', maxRetries: 5);
+
+  @override
+  FutureOr<int> purgeEvents(String channelName,
+          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
+      call(
+          () => client.purgeEvents(channelName,
+              untilID: untilID, before: before, all: all),
+          methodName: '$channelName/purgeEvents',
+          maxRetries: 5);
 
   @override
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) {
@@ -428,7 +609,8 @@ abstract class AsyncEventStorageClient {
 
   /// Calls [AsyncEventStorage.newEvent].
   FutureOr<AsyncEvent?> newEvent(
-      String channelName, String type, Map<String, dynamic> payload);
+      String channelName, String type, Map<String, dynamic> payload,
+      {DateTime? time});
 
   /// Calls [AsyncEventStorage.fetch].
   FutureOr<List<AsyncEvent>> fetch(String channelName, AsyncEventID fromID,
@@ -441,5 +623,9 @@ abstract class AsyncEventStorageClient {
   FutureOr<AsyncEvent?> last(String channelName);
 
   /// Calls [AsyncEventStorage.purge].
-  FutureOr<int> purge(int untilEpoch);
+  FutureOr<int> purgeEpochs(int untilEpoch);
+
+  /// Calls [AsyncEventStorage.purge].
+  FutureOr<int> purgeEvents(String channelName,
+      {AsyncEventID? untilID, DateTime? before, bool all = false});
 }
