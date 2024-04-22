@@ -47,20 +47,27 @@ void main() {
       ];
 
       l1.insertSorted(
+          AsyncEvent('a', AsyncEventID(0, 5), DateTime.now(), 't', {'n': 5}));
+
+      expect(l1.map((e) => e.id.toString()),
+          equals(['0#0', '0#1', '0#2', '0#3', '0#5']));
+
+      l1.insertSorted(
           AsyncEvent('a', AsyncEventID(0, 4), DateTime.now(), 't', {'n': 4}));
 
       expect(l1.map((e) => e.id.toString()),
-          equals(['0#0', '0#1', '0#2', '0#3', '0#4']));
+          equals(['0#0', '0#1', '0#2', '0#3', '0#4', '0#5']));
 
       var l2 = l1.sublist(2);
 
-      expect(l2.map((e) => e.id.toString()), equals(['0#2', '0#3', '0#4']));
+      expect(
+          l2.map((e) => e.id.toString()), equals(['0#2', '0#3', '0#4', '0#5']));
 
       l2.insertSorted(
           AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
 
-      expect(
-          l2.map((e) => e.id.toString()), equals(['0#1', '0#2', '0#3', '0#4']));
+      expect(l2.map((e) => e.id.toString()),
+          equals(['0#1', '0#2', '0#3', '0#4', '0#5']));
     });
 
     test('json', () async {
