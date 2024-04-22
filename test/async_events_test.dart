@@ -292,6 +292,65 @@ Future<void> _doTestBasic(
   sub2b.cancel();
   expect(sub1.isSubscribed, isFalse);
 
+  {
+    var hub2 = AsyncEventHub('test2', hub.storage);
+    var c1b = hub2.channel('c1');
+
+    var c1bEvents = <AsyncEvent>[];
+
+    var sub1b = await c1b.subscribe((e) {
+      c1bEvents.add(e);
+      log.info('C1B>> $e');
+    });
+
+    expect(c1bEvents, equals([]));
+
+    expect(await c1b.pull(), greaterThanOrEqualTo(6));
+
+    expect(
+        c1bEvents.map((e) => '${e.id}${e.payload}'),
+        anyOf(
+          equals([
+            '0#2{name: t4}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '1#3{name: t6}'
+          ]),
+          equals([
+            '0#2{name: t4}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '2#1{name: t6}'
+          ]),
+        ));
+
+    expect(
+        (await c1.fetch(AsyncEventID.any())).map((e) => '${e.id}${e.payload}'),
+        anyOf(
+          equals([
+            '0#0{nextID: 0#2}',
+            '0#2{name: t4}',
+            '1#0{previousID: 0#2}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '1#3{name: t6}'
+          ]),
+          equals([
+            '0#0{nextID: 0#2}',
+            '0#2{name: t4}',
+            '1#0{previousID: 0#2}',
+            '1#1{name: t5}',
+            '1#2{name: t5.2}',
+            '2#0{previousID: 1#2}',
+            '2#1{name: t6}'
+          ]),
+        ));
+
+    expect(sub1b.isSubscribed, isTrue);
+    sub1b.cancel();
+    expect(sub1b.isSubscribed, isFalse);
+  }
+
   expect(
       await storage.last('c1'),
       isA<AsyncEvent>()
