@@ -1,6 +1,6 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/2.3.4
+// BUILDER: reflection_factory/2.5.1
 // BUILD COMMAND: dart run build_runner build
 //
 
@@ -9,6 +9,8 @@
 // ignore_for_file: no_leading_underscores_for_local_identifiers
 // ignore_for_file: camel_case_types
 // ignore_for_file: camel_case_extensions
+// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use_from_same_package
 // ignore_for_file: unnecessary_const
 // ignore_for_file: unnecessary_cast
 // ignore_for_file: unnecessary_type_check
@@ -20,11 +22,24 @@ typedef __TI<T> = TypeInfo<T>;
 typedef __PR = ParameterReflection;
 
 mixin __ReflectionMixin {
-  static final Version _version = Version.parse('2.3.4');
+  static final Version _version = Version.parse('2.5.1');
 
   Version get reflectionFactoryVersion => _version;
 
   List<Reflection> siblingsReflection() => _siblingsReflection();
+}
+
+Symbol? _getSymbol(String? key) {
+  if (key == null) return null;
+
+  switch (key) {
+    case r"channelName":
+      return const Symbol(r"channelName");
+    case r"withChannelName":
+      return const Symbol(r"withChannelName");
+    default:
+      return null;
+  }
 }
 
 // ignore: non_constant_identifier_names
@@ -50,7 +65,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   AsyncEvent$reflection._([AsyncEvent? object])
-      : super(AsyncEvent, 'AsyncEvent', object);
+      : super(AsyncEvent, r'AsyncEvent', object);
 
   static bool _registered = false;
   @override
@@ -63,7 +78,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   @override
-  Version get languageVersion => Version.parse('3.0.0');
+  Version get languageVersion => Version.parse('3.6.0');
 
   @override
   AsyncEvent$reflection withObject([AsyncEvent? obj]) =>
@@ -72,6 +87,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   static AsyncEvent$reflection? _withoutObjectInstance;
   @override
   AsyncEvent$reflection withoutObjectInstance() => staticInstance;
+
+  @override
+  Symbol? getSymbol(String? key) => _getSymbol(key);
 
   static AsyncEvent$reflection get staticInstance =>
       _withoutObjectInstance ??= AsyncEvent$reflection._();
@@ -127,9 +145,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             this,
             AsyncEvent,
             '',
-            () => (String channelName, Object id, DateTime time, String type,
-                    Map<String, dynamic> payload) =>
-                AsyncEvent(channelName, id, time, type, payload),
+            () => AsyncEvent.new,
             const <__PR>[
               __PR(__TR.tString, 'channelName', false, true),
               __PR(__TR.tObject, 'id', false, true),
@@ -145,8 +161,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             this,
             AsyncEvent,
             'fromJson',
-            () => (Map<String, dynamic> json, {String? channelName}) =>
-                AsyncEvent.fromJson(json, channelName: channelName),
+            () => AsyncEvent.fromJson,
             const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
             null,
             const <String, __PR>{
@@ -502,7 +517,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   AsyncEventID$reflection._([AsyncEventID? object])
-      : super(AsyncEventID, 'AsyncEventID', object);
+      : super(AsyncEventID, r'AsyncEventID', object);
 
   static bool _registered = false;
   @override
@@ -515,7 +530,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   @override
-  Version get languageVersion => Version.parse('3.0.0');
+  Version get languageVersion => Version.parse('3.6.0');
 
   @override
   AsyncEventID$reflection withObject([AsyncEventID? obj]) =>
@@ -524,6 +539,9 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   static AsyncEventID$reflection? _withoutObjectInstance;
   @override
   AsyncEventID$reflection withoutObjectInstance() => staticInstance;
+
+  @override
+  Symbol? getSymbol(String? key) => _getSymbol(key);
 
   static AsyncEventID$reflection get staticInstance =>
       _withoutObjectInstance ??= AsyncEventID$reflection._();
@@ -588,7 +606,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             this,
             AsyncEventID,
             '',
-            () => (int epoch, int serial) => AsyncEventID(epoch, serial),
+            () => AsyncEventID.new,
             const <__PR>[
               __PR(__TR.tInt, 'epoch', false, true),
               __PR(__TR.tInt, 'serial', false, true)
@@ -598,16 +616,16 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             null);
       case 'zero':
         return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'zero',
-            () => () => AsyncEventID.zero(), null, null, null, null);
+            () => AsyncEventID.zero, null, null, null, null);
       case 'any':
         return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'any',
-            () => () => AsyncEventID.any(), null, null, null, null);
+            () => AsyncEventID.any, null, null, null, null);
       case 'from':
         return ConstructorReflection<AsyncEventID>(
             this,
             AsyncEventID,
             'from',
-            () => (Object o) => AsyncEventID.from(o),
+            () => AsyncEventID.from,
             const <__PR>[__PR(__TR.tObject, 'o', false, true)],
             null,
             null,
@@ -617,7 +635,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             this,
             AsyncEventID,
             'fromJson',
-            () => (Map<String, dynamic> json) => AsyncEventID.fromJson(json),
+            () => AsyncEventID.fromJson,
             const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
             null,
             null,
@@ -627,7 +645,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             this,
             AsyncEventID,
             'parse',
-            () => (String s) => AsyncEventID.parse(s),
+            () => AsyncEventID.parse,
             const <__PR>[__PR(__TR.tString, 's', false, true)],
             null,
             null,
@@ -1008,8 +1026,8 @@ extension AsyncEventID$reflectionExtension on AsyncEventID {
 }
 
 List<Reflection> _listSiblingsReflection() => <Reflection>[
-      AsyncEventID$reflection(),
       AsyncEvent$reflection(),
+      AsyncEventID$reflection(),
     ];
 
 List<Reflection>? _siblingsReflectionList;

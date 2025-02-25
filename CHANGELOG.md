@@ -1,3 +1,16 @@
+## 1.3.0
+
+- sdk: '>=3.6.0 <4.0.0'
+
+- async_extension: ^1.2.14
+- collection: ^1.19.0
+- logging: ^1.3.0
+- reflection_factory: ^2.5.1
+
+- lints: ^5.1.1
+- build_runner: ^2.4.15
+- test: ^1.25.15
+
 ## 1.2.0
 
 - `AsyncEventID`: added `tryParse`.
