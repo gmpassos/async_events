@@ -1,5 +1,5 @@
 /// Asynchronous event hub library.
-library async_events;
+library;
 
 export 'src/async_call.dart';
 export 'src/async_events_base.dart';

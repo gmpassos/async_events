@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:async_events/async_events.dart';
 import 'package:async_extension/async_extension.dart';
 import 'package:collection/collection.dart';
 import 'package:logging/logging.dart' as logging;
