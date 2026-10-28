@@ -1,3 +1,39 @@
+## 1.4.0
+
+- `AsyncEventPulling.start`: restarts a pulling stopped while a pull was still
+  scheduled (or running). `start` returned at once (`isStarted` was still
+  `true`), and the pending pull then saw the stop and ended the pulling for
+  good: a pulling stopped and started again quickly (e.g. a logout and a
+  login, sharing the same `AsyncEventChannel.pulling`) never pulled again.
+- `AsyncEventChannel.pulling`: starts the shared `AsyncEventPulling` also if it
+  was stopped (`started`), not only if it was never started.
+- `AsyncCaller.call` retries:
+  - A call canceled (`AsyncCall.cancel`, e.g. `cancelChannelCalls`) is not
+    retried anymore. It kept retrying (up to `maxRetries`, with growing
+    intervals) after the cancel.
+  - A retry returning `null` is a valid result. It threw (a `!` on the
+    result), so a retried `lastID` / `last` of an empty channel failed.
+  - The error reported, after the retries, is the last one (it was the
+    first).
+  - A synchronous call canceled while running throws its cancel error (its
+    cause). The error was caught again as a failure of the call, and wrapped
+    by the retry, losing the cause.
+- sdk: '>=3.13.0 <4.0.0' (reflection_factory 2.13 requires it); the code
+  formatted for it.
+- reflection_factory: ^2.13.0 (the reflection regenerated with it: it was
+  generated with 2.5.1, so `ensure_build` failed).
+- Dependencies upgraded:
+  - async_extension: ^1.2.22
+  - collection: ^1.19.1
+  - lints: ^6.1.0
+  - build_runner: ^2.16.2
+  - build_verify: ^3.1.1
+  - dependency_validator: ^5.1.0
+  - test: ^1.33.0
+- CI: separate `build`, `test_vm` (with the coverage) and `test_chrome` jobs;
+  the tests run once per platform. `actions/checkout@v7`,
+  `codecov/codecov-action@v7`.
+
 ## 1.3.0
 
 - sdk: '>=3.6.0 <4.0.0'
