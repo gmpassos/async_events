@@ -103,6 +103,159 @@ void main() {
       await _doTestBasic(hub, log, storage);
     });
   });
+
+  group('AsyncEventPulling', () {
+    test('restarted right after a stop (a pull still scheduled)', () async {
+      var storage =
+          AsyncEventStorageMemory('test-restart', epochPeriod: _epochPeriod);
+      var hub = AsyncEventHub('test-restart', storage);
+      var c1 = hub.channel('c1');
+
+      const period = Duration(milliseconds: 300);
+
+      var pulling = c1.pulling(period: period);
+      expect(pulling.isStarted, isTrue);
+
+      // A pull done, the next one scheduled:
+      await _sleep(log, 100);
+      expect(pulling.isScheduled, isTrue);
+
+      pulling.stop(cancelChannelCalls: true);
+      expect(pulling.isStopped, isFalse); // A pull is still scheduled.
+
+      // Restarted (the same shared instance) before the scheduled pull:
+      var pulling2 = c1.pulling(period: period);
+      expect(pulling2, same(pulling));
+      expect(pulling.isStarted, isTrue);
+      expect(pulling.isStopped, isFalse);
+
+      // Still pulling after the scheduled pull (it used to stop for good):
+      await _sleep(log, 1000);
+      expect(pulling.isStarted, isTrue);
+      expect(pulling.isScheduled || pulling.isPulling, isTrue);
+
+      pulling.stop();
+      await _sleep(log, 1000);
+      expect(pulling.isStarted, isFalse);
+      expect(pulling.isStopped, isTrue);
+    });
+
+    test('restarted after a stop (nothing scheduled)', () async {
+      var storage =
+          AsyncEventStorageMemory('test-restart2', epochPeriod: _epochPeriod);
+      var hub = AsyncEventHub('test-restart2', storage);
+      var c1 = hub.channel('c1');
+
+      var pulling = AsyncEventPulling(c1, period: Duration(milliseconds: 300));
+
+      pulling.start();
+      await _sleep(log, 100);
+      pulling.stop();
+      await _sleep(log, 700);
+      expect(pulling.isStarted, isFalse);
+      expect(pulling.isStopped, isTrue);
+
+      pulling.start();
+      expect(pulling.isStarted, isTrue);
+      expect(pulling.isStopped, isFalse);
+
+      await _sleep(log, 700);
+      expect(pulling.isScheduled || pulling.isPulling, isTrue);
+
+      pulling.stop();
+    });
+  });
+
+  group('AsyncCaller', () {
+    test('a call canceled while retrying returns at once', () async {
+      var server = _FailingAsyncEventStorageServer(
+          AsyncEventStorageMemory('test-fail', epochPeriod: _epochPeriod));
+      var storage = AsyncEventStorageRemote(
+          'test-fail', _MyAsyncEventStorageClient(server));
+
+      var init = DateTime.now();
+
+      // Fails: retried (up to 5 times, with growing intervals):
+      var fetchAsync = storage.fetch('c1', AsyncEventID.zero());
+
+      await _sleep(log, 100);
+      storage.cancelChannelCalls('c1');
+
+      var events = await fetchAsync;
+      var time = DateTime.now().difference(init);
+
+      expect(events, isEmpty);
+      // Not retried after the cancel (the retries take several seconds):
+      expect(time.inMilliseconds, lessThan(1500));
+      expect(server.fetchCount, lessThanOrEqualTo(2));
+    });
+
+    const retryInterval = Duration(milliseconds: 10);
+
+    test('a retry returning `null`: a valid result', () async {
+      var caller = _Caller();
+      var calls = 0;
+
+      var result = await caller.call<int?>(() async {
+        if (++calls == 1) throw StateError('first');
+        return null;
+      }, maxRetries: 3, retryInterval: retryInterval);
+
+      expect(result, isNull);
+      expect(calls, equals(2));
+      expect(caller.calls, isEmpty);
+    });
+
+    test('retries exhausted: the last error, or the error value', () async {
+      var caller = _Caller();
+      var calls = 0;
+
+      Future<int> fail() async => throw StateError('error ${++calls}');
+
+      await expectLater(
+          caller.call<int>(fail,
+              methodName: 'm', maxRetries: 2, retryInterval: retryInterval),
+          throwsA(isA<AsyncEventError>()
+              .having((e) => e.cause.toString(), 'cause', contains('error 3'))
+              .having((e) => e.message, 'message', contains('`m`'))));
+      expect(calls, equals(3));
+
+      expect(
+          await caller.call<int>(fail,
+              errorValue: -1, maxRetries: 1, retryInterval: retryInterval),
+          equals(-1));
+
+      expect(
+          await caller.call<int?>(fail,
+              nullErrorValue: true, retryInterval: retryInterval),
+          isNull);
+
+      expect(caller.calls, isEmpty);
+    });
+
+    test('a synchronous call', () {
+      var caller = _Caller();
+      expect(caller.call<int>(() => 7), equals(7));
+      expect(caller.calls, isEmpty);
+    });
+  });
+}
+
+class _Caller with AsyncCaller {}
+
+/// A server whose `fetch` always fails.
+class _FailingAsyncEventStorageServer extends _MyAsyncEventStorageServer {
+  _FailingAsyncEventStorageServer(super.storage);
+
+  int fetchCount = 0;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetch(
+      String channelName, AsyncEventID fromID,
+      {int? limit}) async {
+    ++fetchCount;
+    throw StateError("Forcing error: $fetchCount");
+  }
 }
 
 Future<void> _doTestBasic(

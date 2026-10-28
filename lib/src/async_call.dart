@@ -71,17 +71,27 @@ mixin AsyncCaller {
     final maxRetries = asyncCall.maxRetries;
 
     for (var i = 0; i < maxRetries; ++i) {
+      // Canceled: not retried anymore.
+      if (asyncCall.isCanceled) break;
+
       var intervalMs = _calcInterval(i, retryIntervalMs);
 
       await Future.delayed(Duration(milliseconds: intervalMs));
 
+      if (asyncCall.isCanceled) break;
+
+      R ret;
       try {
-        var ret = await asyncCall.call();
-        return _callReturn(asyncCall, returnValue: ret)!;
+        ret = await asyncCall.call();
       } catch (e, s) {
-        error = e;
-        stackTrace = s;
+        // The last error is the one reported:
+        asyncCall.error = e;
+        asyncCall.stackTrace = s;
+        continue;
       }
+
+      // A `null` result is valid (e.g. `lastID` of an empty channel).
+      return _callReturn(asyncCall, returnValue: ret);
     }
 
     return _callReturn(asyncCall, withError: true);

@@ -464,6 +464,9 @@ class AsyncEventChannel with WithLastEventID {
       <AsyncEventPullingConfig, AsyncEventPulling>{};
 
   /// Returns a shared [AsyncEventPulling] based on the defined [AsyncEventPullingConfig].
+  ///
+  /// If [started] it's started, also if it was stopped (see
+  /// [AsyncEventPulling.start]).
   AsyncEventPulling pulling(
       {Duration? delay,
       Duration period = const Duration(seconds: 10),
@@ -475,7 +478,7 @@ class AsyncEventChannel with WithLastEventID {
     var eventPulling = _pullingByConfig.putIfAbsent(
         config, () => AsyncEventPulling.fromConfig(this, config));
 
-    if (started && !eventPulling.isStarted) {
+    if (started) {
       eventPulling.start(delay: delay);
     }
 
@@ -843,10 +846,20 @@ class AsyncEventPulling {
   bool get isStarted => _started;
 
   /// Starts pulling.
+  ///
+  /// Also restarts it right after a [stop] while a pull is still scheduled
+  /// or running: that pending pull continues the pulling (it used to see the
+  /// stop and end it, leaving this instance stopped but [isStarted]).
   void start({Duration? delay}) {
-    if (_started) return;
+    if (_started && !_stopped) return;
+
+    // Stopped, but a pull is pending: it continues the pulling.
+    var pending = _started && (isScheduled || isPulling);
+
     _started = true;
     _stopped = false;
+
+    if (pending) return;
 
     if (delay != null) {
       Future.delayed(delay, _autoPull);

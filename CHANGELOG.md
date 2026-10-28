@@ -1,3 +1,24 @@
+## 1.3.1
+
+- `AsyncEventPulling.start`: restarts a pulling stopped while a pull was still
+  scheduled (or running). `start` returned at once (`isStarted` was still
+  `true`), and the pending pull then saw the stop and ended the pulling for
+  good: a pulling stopped and started again quickly (e.g. a logout and a
+  login, sharing the same `AsyncEventChannel.pulling`) never pulled again.
+- `AsyncEventChannel.pulling`: starts the shared `AsyncEventPulling` also if it
+  was stopped (`started`), not only if it was never started.
+- `AsyncCaller.call` retries:
+  - A call canceled (`AsyncCall.cancel`, e.g. `cancelChannelCalls`) is not
+    retried anymore. It kept retrying (up to `maxRetries`, with growing
+    intervals) after the cancel.
+  - A retry returning `null` is a valid result. It threw (a `!` on the
+    result), so a retried `lastID` / `last` of an empty channel failed.
+  - The error reported, after the retries, is the last one (it was the
+    first).
+- CI: separate `build`, `test_vm` (with the coverage) and `test_chrome` jobs;
+  the tests run once per platform. `actions/checkout@v7`,
+  `codecov/codecov-action@v7`.
+
 ## 1.3.0
 
 - sdk: '>=3.6.0 <4.0.0'
