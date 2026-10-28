@@ -10,8 +10,9 @@ const _epochPeriod = Duration(seconds: 2);
 
 void main() {
   logging.Logger.root.level = logging.Level.ALL;
-  logging.Logger.root.onRecord
-      .listen((event) => print('${DateTime.now()}\t$event'));
+  logging.Logger.root.onRecord.listen(
+    (event) => print('${DateTime.now()}\t$event'),
+  );
 
   group('AsyncEvent', () {
     test('insertSorted', () async {
@@ -19,10 +20,12 @@ void main() {
         var l0 = <AsyncEvent>[];
 
         l0.insertSorted(
-            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+          AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}),
+        );
 
         l0.insertSorted(
-            AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}));
+          AsyncEvent('a', AsyncEventID(0, 3), DateTime.now(), 't', {'n': 3}),
+        );
 
         expect(l0.map((e) => e.id.toString()), equals(['0#2', '0#3']));
       }
@@ -31,10 +34,12 @@ void main() {
         var l0 = <AsyncEvent>[];
 
         l0.insertSorted(
-            AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}));
+          AsyncEvent('a', AsyncEventID(0, 2), DateTime.now(), 't', {'n': 2}),
+        );
 
         l0.insertSorted(
-            AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+          AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}),
+        );
 
         expect(l0.map((e) => e.id.toString()), equals(['0#1', '0#2']));
       }
@@ -47,27 +52,38 @@ void main() {
       ];
 
       l1.insertSorted(
-          AsyncEvent('a', AsyncEventID(0, 5), DateTime.now(), 't', {'n': 5}));
+        AsyncEvent('a', AsyncEventID(0, 5), DateTime.now(), 't', {'n': 5}),
+      );
 
-      expect(l1.map((e) => e.id.toString()),
-          equals(['0#0', '0#1', '0#2', '0#3', '0#5']));
+      expect(
+        l1.map((e) => e.id.toString()),
+        equals(['0#0', '0#1', '0#2', '0#3', '0#5']),
+      );
 
       l1.insertSorted(
-          AsyncEvent('a', AsyncEventID(0, 4), DateTime.now(), 't', {'n': 4}));
+        AsyncEvent('a', AsyncEventID(0, 4), DateTime.now(), 't', {'n': 4}),
+      );
 
-      expect(l1.map((e) => e.id.toString()),
-          equals(['0#0', '0#1', '0#2', '0#3', '0#4', '0#5']));
+      expect(
+        l1.map((e) => e.id.toString()),
+        equals(['0#0', '0#1', '0#2', '0#3', '0#4', '0#5']),
+      );
 
       var l2 = l1.sublist(2);
 
       expect(
-          l2.map((e) => e.id.toString()), equals(['0#2', '0#3', '0#4', '0#5']));
+        l2.map((e) => e.id.toString()),
+        equals(['0#2', '0#3', '0#4', '0#5']),
+      );
 
       l2.insertSorted(
-          AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}));
+        AsyncEvent('a', AsyncEventID(0, 1), DateTime.now(), 't', {'n': 1}),
+      );
 
-      expect(l2.map((e) => e.id.toString()),
-          equals(['0#1', '0#2', '0#3', '0#4', '0#5']));
+      expect(
+        l2.map((e) => e.id.toString()),
+        equals(['0#1', '0#2', '0#3', '0#4', '0#5']),
+      );
     });
 
     test('json', () async {
@@ -78,15 +94,17 @@ void main() {
 
       expect(AsyncEvent.fromJson(event1.toJson()), equals(event1));
 
-      var classReflection =
-          ReflectionFactory().getRegisterClassReflection<AsyncEvent>()!;
+      var classReflection = ReflectionFactory()
+          .getRegisterClassReflection<AsyncEvent>()!;
 
       expect(classReflection.fromJson(event1.toJson()), equals(event1));
     });
 
     test('basic', () async {
-      var storage =
-          AsyncEventStorageMemory('test-memory', epochPeriod: _epochPeriod);
+      var storage = AsyncEventStorageMemory(
+        'test-memory',
+        epochPeriod: _epochPeriod,
+      );
       var hub = AsyncEventHub('test', storage);
 
       await _doTestBasic(hub, log, storage);
@@ -94,7 +112,8 @@ void main() {
 
     test('remote', () async {
       var server = _MyAsyncEventStorageServer(
-          AsyncEventStorageMemory('test-server', epochPeriod: _epochPeriod));
+        AsyncEventStorageMemory('test-server', epochPeriod: _epochPeriod),
+      );
       var client = _MyAsyncEventStorageClient(server);
 
       var storage = AsyncEventStorageRemote('test', client);
@@ -106,8 +125,10 @@ void main() {
 
   group('AsyncEventPulling', () {
     test('restarted right after a stop (a pull still scheduled)', () async {
-      var storage =
-          AsyncEventStorageMemory('test-restart', epochPeriod: _epochPeriod);
+      var storage = AsyncEventStorageMemory(
+        'test-restart',
+        epochPeriod: _epochPeriod,
+      );
       var hub = AsyncEventHub('test-restart', storage);
       var c1 = hub.channel('c1');
 
@@ -141,8 +162,10 @@ void main() {
     });
 
     test('restarted after a stop (nothing scheduled)', () async {
-      var storage =
-          AsyncEventStorageMemory('test-restart2', epochPeriod: _epochPeriod);
+      var storage = AsyncEventStorageMemory(
+        'test-restart2',
+        epochPeriod: _epochPeriod,
+      );
       var hub = AsyncEventHub('test-restart2', storage);
       var c1 = hub.channel('c1');
 
@@ -169,9 +192,12 @@ void main() {
   group('AsyncCaller', () {
     test('a call canceled while retrying returns at once', () async {
       var server = _FailingAsyncEventStorageServer(
-          AsyncEventStorageMemory('test-fail', epochPeriod: _epochPeriod));
+        AsyncEventStorageMemory('test-fail', epochPeriod: _epochPeriod),
+      );
       var storage = AsyncEventStorageRemote(
-          'test-fail', _MyAsyncEventStorageClient(server));
+        'test-fail',
+        _MyAsyncEventStorageClient(server),
+      );
 
       var init = DateTime.now();
 
@@ -196,10 +222,14 @@ void main() {
       var caller = _Caller();
       var calls = 0;
 
-      var result = await caller.call<int?>(() async {
-        if (++calls == 1) throw StateError('first');
-        return null;
-      }, maxRetries: 3, retryInterval: retryInterval);
+      var result = await caller.call<int?>(
+        () async {
+          if (++calls == 1) throw StateError('first');
+          return null;
+        },
+        maxRetries: 3,
+        retryInterval: retryInterval,
+      );
 
       expect(result, isNull);
       expect(calls, equals(2));
@@ -213,22 +243,38 @@ void main() {
       Future<int> fail() async => throw StateError('error ${++calls}');
 
       await expectLater(
-          caller.call<int>(fail,
-              methodName: 'm', maxRetries: 2, retryInterval: retryInterval),
-          throwsA(isA<AsyncEventError>()
+        caller.call<int>(
+          fail,
+          methodName: 'm',
+          maxRetries: 2,
+          retryInterval: retryInterval,
+        ),
+        throwsA(
+          isA<AsyncEventError>()
               .having((e) => e.cause.toString(), 'cause', contains('error 3'))
-              .having((e) => e.message, 'message', contains('`m`'))));
+              .having((e) => e.message, 'message', contains('`m`')),
+        ),
+      );
       expect(calls, equals(3));
 
       expect(
-          await caller.call<int>(fail,
-              errorValue: -1, maxRetries: 1, retryInterval: retryInterval),
-          equals(-1));
+        await caller.call<int>(
+          fail,
+          errorValue: -1,
+          maxRetries: 1,
+          retryInterval: retryInterval,
+        ),
+        equals(-1),
+      );
 
       expect(
-          await caller.call<int?>(fail,
-              nullErrorValue: true, retryInterval: retryInterval),
-          isNull);
+        await caller.call<int?>(
+          fail,
+          nullErrorValue: true,
+          retryInterval: retryInterval,
+        ),
+        isNull,
+      );
 
       expect(caller.calls, isEmpty);
     });
@@ -251,15 +297,20 @@ class _FailingAsyncEventStorageServer extends _MyAsyncEventStorageServer {
 
   @override
   Future<List<Map<String, dynamic>>> fetch(
-      String channelName, AsyncEventID fromID,
-      {int? limit}) async {
+    String channelName,
+    AsyncEventID fromID, {
+    int? limit,
+  }) async {
     ++fetchCount;
     throw StateError("Forcing error: $fetchCount");
   }
 }
 
 Future<void> _doTestBasic(
-    AsyncEventHub hub, logging.Logger log, AsyncEventStorage storage) async {
+  AsyncEventHub hub,
+  logging.Logger log,
+  AsyncEventStorage storage,
+) async {
   log.info('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<');
   log.info("Hub: $hub");
   log.info("Storage: $storage");
@@ -302,11 +353,15 @@ Future<void> _doTestBasic(
 
   await sub2b.pull();
 
-  expect(c2bEvents.map((e) => e.toJson()),
-      [eventC2_1.toJson(), eventC2_2!.toJson()]);
+  expect(c2bEvents.map((e) => e.toJson()), [
+    eventC2_1.toJson(),
+    eventC2_2!.toJson(),
+  ]);
 
-  expect(c2Events.map((e) => e.toJson()),
-      [eventC2_1.toJson(), eventC2_2.toJson()]);
+  expect(c2Events.map((e) => e.toJson()), [
+    eventC2_1.toJson(),
+    eventC2_2.toJson(),
+  ]);
 
   var eventPulling = AsyncEventPulling(c1, period: Duration(milliseconds: 200));
 
@@ -333,8 +388,10 @@ Future<void> _doTestBasic(
 
   expect(waitEventResult, isNotNull);
 
-  expect(c1Events.map((e) => e.toJson()),
-      [eventC1_1.toJson(), eventC1_2!.toJson()]);
+  expect(c1Events.map((e) => e.toJson()), [
+    eventC1_1.toJson(),
+    eventC1_2!.toJson(),
+  ]);
 
   expect(await hub.epoch, equals(0));
 
@@ -355,34 +412,46 @@ Future<void> _doTestBasic(
 
   expect(fetchDelayedEvents, isNotEmpty);
 
-  expect(c1Events.map((e) => e.toJson()),
-      [eventC1_1.toJson(), eventC1_2.toJson(), eventC1_3!.toJson()]);
+  expect(c1Events.map((e) => e.toJson()), [
+    eventC1_1.toJson(),
+    eventC1_2.toJson(),
+    eventC1_3!.toJson(),
+  ]);
 
   expect(await storage.last('c1'), eventC1_3);
 
-  expect((await c1.fetch(eventC1_2.id)).where((e) => e.type == 't'),
-      equals([eventC1_2, eventC1_3]));
-
-  expect((await c1.fetch(eventC1_2.id, limit: 3)).where((e) => e.type == 't'),
-      equals([eventC1_2, eventC1_3]));
-
-  expect((await c1.fetch(eventC1_2.id, limit: 2)).where((e) => e.type == 't'),
-      equals([eventC1_3]));
-
-  expect((await c1.fetch(eventC1_2.id, limit: 1)).where((e) => e.type == 't'),
-      equals([eventC1_3]));
+  expect(
+    (await c1.fetch(eventC1_2.id)).where((e) => e.type == 't'),
+    equals([eventC1_2, eventC1_3]),
+  );
 
   expect(
-      (await c1.fetch(AsyncEventID.any()))
-          .map((e) => '${e.id}${e.payload}')
-          .toList(),
-      equals([
-        '0#0{}',
-        '0#1{name: t1}',
-        '0#2{name: t4}',
-        '1#0{previousID: 0#2}',
-        '1#1{name: t5}'
-      ]));
+    (await c1.fetch(eventC1_2.id, limit: 3)).where((e) => e.type == 't'),
+    equals([eventC1_2, eventC1_3]),
+  );
+
+  expect(
+    (await c1.fetch(eventC1_2.id, limit: 2)).where((e) => e.type == 't'),
+    equals([eventC1_3]),
+  );
+
+  expect(
+    (await c1.fetch(eventC1_2.id, limit: 1)).where((e) => e.type == 't'),
+    equals([eventC1_3]),
+  );
+
+  expect(
+    (await c1.fetch(AsyncEventID.any()))
+        .map((e) => '${e.id}${e.payload}')
+        .toList(),
+    equals([
+      '0#0{}',
+      '0#1{name: t1}',
+      '0#2{name: t4}',
+      '1#0{previousID: 0#2}',
+      '1#1{name: t5}',
+    ]),
+  );
 
   expect(await c1.purge(untilID: eventC1_2.id), equals(2));
 
@@ -390,33 +459,37 @@ Future<void> _doTestBasic(
 
   expect(eventPulling.isPulling, isFalse);
 
-  expect(c1Events.map((e) => '${e.id}${e.payload}'),
-      equals(['0#1{name: t1}', '0#2{name: t4}', '1#1{name: t5}']));
+  expect(
+    c1Events.map((e) => '${e.id}${e.payload}'),
+    equals(['0#1{name: t1}', '0#2{name: t4}', '1#1{name: t5}']),
+  );
 
   expect(await c1.submit('t', {'name': 't5.2'}), isNotNull);
 
   expect(await eventPulling.waitPulling(), isTrue);
 
   expect(
-      c1Events.map((e) => '${e.id}${e.payload}'),
-      equals([
-        '0#1{name: t1}',
-        '0#2{name: t4}',
-        '1#1{name: t5}',
-        '1#2{name: t5.2}'
-      ]));
+    c1Events.map((e) => '${e.id}${e.payload}'),
+    equals([
+      '0#1{name: t1}',
+      '0#2{name: t4}',
+      '1#1{name: t5}',
+      '1#2{name: t5.2}',
+    ]),
+  );
 
   expect(
-      (await c1.fetch(AsyncEventID.any()))
-          .map((e) => '${e.id}${e.payload}')
-          .toList(),
-      equals([
-        '0#0{nextID: 0#2}',
-        '0#2{name: t4}',
-        '1#0{previousID: 0#2}',
-        '1#1{name: t5}',
-        '1#2{name: t5.2}'
-      ]));
+    (await c1.fetch(AsyncEventID.any()))
+        .map((e) => '${e.id}${e.payload}')
+        .toList(),
+    equals([
+      '0#0{nextID: 0#2}',
+      '0#2{name: t4}',
+      '1#0{previousID: 0#2}',
+      '1#1{name: t5}',
+      '1#2{name: t5.2}',
+    ]),
+  );
 
   var submitAsync = c1.submit('t', {'name': 't6'});
 
@@ -461,43 +534,45 @@ Future<void> _doTestBasic(
     expect(await c1b.pull(), greaterThanOrEqualTo(6));
 
     expect(
-        c1bEvents.map((e) => '${e.id}${e.payload}'),
-        anyOf(
-          equals([
-            '0#2{name: t4}',
-            '1#1{name: t5}',
-            '1#2{name: t5.2}',
-            '1#3{name: t6}'
-          ]),
-          equals([
-            '0#2{name: t4}',
-            '1#1{name: t5}',
-            '1#2{name: t5.2}',
-            '2#1{name: t6}'
-          ]),
-        ));
+      c1bEvents.map((e) => '${e.id}${e.payload}'),
+      anyOf(
+        equals([
+          '0#2{name: t4}',
+          '1#1{name: t5}',
+          '1#2{name: t5.2}',
+          '1#3{name: t6}',
+        ]),
+        equals([
+          '0#2{name: t4}',
+          '1#1{name: t5}',
+          '1#2{name: t5.2}',
+          '2#1{name: t6}',
+        ]),
+      ),
+    );
 
     expect(
-        (await c1.fetch(AsyncEventID.any())).map((e) => '${e.id}${e.payload}'),
-        anyOf(
-          equals([
-            '0#0{nextID: 0#2}',
-            '0#2{name: t4}',
-            '1#0{previousID: 0#2}',
-            '1#1{name: t5}',
-            '1#2{name: t5.2}',
-            '1#3{name: t6}'
-          ]),
-          equals([
-            '0#0{nextID: 0#2}',
-            '0#2{name: t4}',
-            '1#0{previousID: 0#2}',
-            '1#1{name: t5}',
-            '1#2{name: t5.2}',
-            '2#0{previousID: 1#2}',
-            '2#1{name: t6}'
-          ]),
-        ));
+      (await c1.fetch(AsyncEventID.any())).map((e) => '${e.id}${e.payload}'),
+      anyOf(
+        equals([
+          '0#0{nextID: 0#2}',
+          '0#2{name: t4}',
+          '1#0{previousID: 0#2}',
+          '1#1{name: t5}',
+          '1#2{name: t5.2}',
+          '1#3{name: t6}',
+        ]),
+        equals([
+          '0#0{nextID: 0#2}',
+          '0#2{name: t4}',
+          '1#0{previousID: 0#2}',
+          '1#1{name: t5}',
+          '1#2{name: t5.2}',
+          '2#0{previousID: 1#2}',
+          '2#1{name: t6}',
+        ]),
+      ),
+    );
 
     expect(sub1b.isSubscribed, isTrue);
     sub1b.cancel();
@@ -505,9 +580,9 @@ Future<void> _doTestBasic(
   }
 
   expect(
-      await storage.last('c1'),
-      isA<AsyncEvent>()
-          .having((evt) => evt.payload, 'payload', {'name': 't6'}));
+    await storage.last('c1'),
+    isA<AsyncEvent>().having((evt) => evt.payload, 'payload', {'name': 't6'}),
+  );
   expect(await storage.last('c2'), eventC2_2);
 
   log.info("Hub: $hub");
@@ -546,19 +621,26 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
 
   @override
   Future<Map<String, dynamic>?> newEvent(
-          String channelName, String type, Map<String, dynamic> payload,
-          {DateTime? time}) =>
-      super.newEvent(channelName, type, payload, time: time).asFutureDelayed;
+    String channelName,
+    String type,
+    Map<String, dynamic> payload, {
+    DateTime? time,
+  }) => super.newEvent(channelName, type, payload, time: time).asFutureDelayed;
 
   final Map<String, int> _fetchRequestCounter = <String, int>{};
 
   @override
   Future<List<Map<String, dynamic>>> fetch(
-      String channelName, AsyncEventID fromID,
-      {int? limit}) {
+    String channelName,
+    AsyncEventID fromID, {
+    int? limit,
+  }) {
     var key = '$channelName>$fromID';
-    var count =
-        _fetchRequestCounter.update(key, (c) => c + 1, ifAbsent: () => 1);
+    var count = _fetchRequestCounter.update(
+      key,
+      (c) => c + 1,
+      ifAbsent: () => 1,
+    );
 
     if (count == 2) {
       log.severe("Forcing error: $key = $count");
@@ -581,11 +663,14 @@ class _MyAsyncEventStorageServer with AsyncEventStorageAsJSON {
       super.purgeEpochs(untilEpoch).asFutureDelayed;
 
   @override
-  Future<int> purgeEvents(String channelName,
-          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
-      super
-          .purgeEvents(channelName, untilID: untilID, before: before, all: all)
-          .asFutureDelayed;
+  Future<int> purgeEvents(
+    String channelName, {
+    AsyncEventID? untilID,
+    DateTime? before,
+    bool all = false,
+  }) => super
+      .purgeEvents(channelName, untilID: untilID, before: before, all: all)
+      .asFutureDelayed;
 
   @override
   String toString() {

@@ -15,8 +15,18 @@
     result), so a retried `lastID` / `last` of an empty channel failed.
   - The error reported, after the retries, is the last one (it was the
     first).
+- sdk: '>=3.13.0 <4.0.0' (reflection_factory 2.13 requires it); the code
+  formatted for it.
 - reflection_factory: ^2.13.0 (the reflection regenerated with it: it was
   generated with 2.5.1, so `ensure_build` failed).
+- Dependencies upgraded:
+  - async_extension: ^1.2.22
+  - collection: ^1.19.1
+  - lints: ^6.1.0
+  - build_runner: ^2.16.2
+  - build_verify: ^3.1.1
+  - dependency_validator: ^5.1.0
+  - test: ^1.33.0
 - CI: separate `build`, `test_vm` (with the coverage) and `test_chrome` jobs;
   the tests run once per platform. `actions/checkout@v7`,
   `codecov/codecov-action@v7`.

@@ -92,10 +92,7 @@ class AsyncEventID implements Comparable<AsyncEventID> {
     }
   }
 
-  Map<String, dynamic> toJson() => {
-        'epoch': epoch,
-        'serial': serial,
-      };
+  Map<String, dynamic> toJson() => {'epoch': epoch, 'serial': serial};
 
   @override
   String toString() {
@@ -186,7 +183,7 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   final Map<String, dynamic> payload;
 
   AsyncEvent(this.channelName, Object id, this.time, this.type, this.payload)
-      : id = AsyncEventID.from(id) {
+    : id = AsyncEventID.from(id) {
     boot();
   }
 
@@ -201,23 +198,26 @@ class AsyncEvent implements Comparable<AsyncEvent> {
   @override
   int compareTo(AsyncEvent other) => id.compareTo(other.id);
 
-  factory AsyncEvent.fromJson(Map<String, dynamic> json,
-      {String? channelName}) {
+  factory AsyncEvent.fromJson(
+    Map<String, dynamic> json, {
+    String? channelName,
+  }) {
     return AsyncEvent(
-        json['channel'] ?? channelName!,
-        AsyncEventID.fromJson(json),
-        DateTime.fromMillisecondsSinceEpoch(json['time']),
-        json['type'],
-        json['payload']);
+      json['channel'] ?? channelName!,
+      AsyncEventID.fromJson(json),
+      DateTime.fromMillisecondsSinceEpoch(json['time']),
+      json['type'],
+      json['payload'],
+    );
   }
 
   Map<String, dynamic> toJson({bool withChannelName = true}) => {
-        if (withChannelName) 'channel': channelName,
-        'id': id.toString(),
-        'time': time.toUtc().millisecondsSinceEpoch,
-        'type': type,
-        'payload': payload,
-      };
+    if (withChannelName) 'channel': channelName,
+    'id': id.toString(),
+    'time': time.toUtc().millisecondsSinceEpoch,
+    'type': type,
+    'payload': payload,
+  };
 
   @override
   String toString() {
@@ -313,23 +313,34 @@ class AsyncEventHub {
   FutureOr<int> get epoch => storage.epoch;
 
   FutureOr<AsyncEvent?> _submit(
-          AsyncEventChannel channel, String type, Map<String, dynamic> payload,
-          {DateTime? time}) =>
-      storage.newEvent(channel.name, type, payload, time: time);
+    AsyncEventChannel channel,
+    String type,
+    Map<String, dynamic> payload, {
+    DateTime? time,
+  }) => storage.newEvent(channel.name, type, payload, time: time);
 
   FutureOr<List<AsyncEvent>> _fetch(
-          AsyncEventChannel channel, AsyncEventID fromID, int? limit) =>
-      storage.fetch(channel.name, fromID, limit: limit);
+    AsyncEventChannel channel,
+    AsyncEventID fromID,
+    int? limit,
+  ) => storage.fetch(channel.name, fromID, limit: limit);
 
   /// Pull new events from storage.
   FutureOr<int> pull(String channelName, AsyncEventID? fromID) =>
       storage.pull(channelName, fromID);
 
   /// Purge events and create a new epoch from the remaining events.
-  FutureOr<int> purge(String channelName,
-          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
-      storage.purgeEvents(channelName,
-          untilID: untilID, before: before, all: all);
+  FutureOr<int> purge(
+    String channelName, {
+    AsyncEventID? untilID,
+    DateTime? before,
+    bool all = false,
+  }) => storage.purgeEvents(
+    channelName,
+    untilID: untilID,
+    before: before,
+    all: all,
+  );
 
   /// Cancels channel with [channelName] calls.
   void cancelChannelCalls(String channelName) =>
@@ -401,10 +412,12 @@ class AsyncEventChannel with WithLastEventID {
       <AsyncEventSubscriptionGroup>[];
 
   /// Subscribe to events of this channel.
-  FutureOr<AsyncEventSubscription> subscribe(AsyncEventListener listener,
-      {AsyncEventID? fromID,
-      bool fromBegin = false,
-      bool fromEpochBegin = false}) {
+  FutureOr<AsyncEventSubscription> subscribe(
+    AsyncEventListener listener, {
+    AsyncEventID? fromID,
+    bool fromBegin = false,
+    bool fromEpochBegin = false,
+  }) {
     if (fromID == null) {
       if (fromBegin) {
         fromID = AsyncEventID.zero();
@@ -419,7 +432,9 @@ class AsyncEventChannel with WithLastEventID {
   }
 
   FutureOr<AsyncEventSubscription> _subscribeImpl(
-      AsyncEventListener listener, AsyncEventID? fromID) {
+    AsyncEventListener listener,
+    AsyncEventID? fromID,
+  ) {
     var group = AsyncEventSubscriptionGroup(this, fromID: fromID);
     var subscription = AsyncEventSubscription(group, listener, fromID: fromID);
 
@@ -456,9 +471,11 @@ class AsyncEventChannel with WithLastEventID {
       _subscriptionsGroups.contains(subscriptionGroup);
 
   /// Submits and broadcast an event to this channel.
-  FutureOr<AsyncEvent?> submit(String type, Map<String, dynamic> payload,
-          {DateTime? time}) =>
-      hub._submit(this, type, payload, time: time);
+  FutureOr<AsyncEvent?> submit(
+    String type,
+    Map<String, dynamic> payload, {
+    DateTime? time,
+  }) => hub._submit(this, type, payload, time: time);
 
   final Map<AsyncEventPullingConfig, AsyncEventPulling> _pullingByConfig =
       <AsyncEventPullingConfig, AsyncEventPulling>{};
@@ -467,16 +484,21 @@ class AsyncEventChannel with WithLastEventID {
   ///
   /// If [started] it's started, also if it was stopped (see
   /// [AsyncEventPulling.start]).
-  AsyncEventPulling pulling(
-      {Duration? delay,
-      Duration period = const Duration(seconds: 10),
-      Duration? minInterval,
-      bool started = true}) {
-    var config =
-        AsyncEventPullingConfig(period: period, minInterval: minInterval);
+  AsyncEventPulling pulling({
+    Duration? delay,
+    Duration period = const Duration(seconds: 10),
+    Duration? minInterval,
+    bool started = true,
+  }) {
+    var config = AsyncEventPullingConfig(
+      period: period,
+      minInterval: minInterval,
+    );
 
     var eventPulling = _pullingByConfig.putIfAbsent(
-        config, () => AsyncEventPulling.fromConfig(this, config));
+      config,
+      () => AsyncEventPulling.fromConfig(this, config),
+    );
 
     if (started) {
       eventPulling.start(delay: delay);
@@ -485,17 +507,22 @@ class AsyncEventChannel with WithLastEventID {
     return eventPulling;
   }
 
-  FutureOr<int> purge(
-          {AsyncEventID? untilID, DateTime? before, bool all = false}) =>
-      hub.purge(name, untilID: untilID, before: before, all: all);
+  FutureOr<int> purge({
+    AsyncEventID? untilID,
+    DateTime? before,
+    bool all = false,
+  }) => hub.purge(name, untilID: untilID, before: before, all: all);
 
   /// Fetches events of this channel starting [fromID].
   FutureOr<List<AsyncEvent>> fetch(AsyncEventID fromID, {int? limit}) =>
       hub._fetch(this, fromID, limit);
 
   /// Fetches events of this channel starting [fromID] with a [timeout].
-  FutureOr<List<AsyncEvent>> fetchDelayed(AsyncEventID fromID,
-      {Duration timeout = const Duration(seconds: 1), int? limit}) {
+  FutureOr<List<AsyncEvent>> fetchDelayed(
+    AsyncEventID fromID, {
+    Duration timeout = const Duration(seconds: 1),
+    int? limit,
+  }) {
     if (timeout.inMilliseconds <= 0) return fetch(fromID);
 
     return fetch(fromID, limit: limit).resolveMapped((events) {
@@ -672,7 +699,8 @@ class AsyncEventChannel with WithLastEventID {
           return true;
         } else {
           _logChannel.warning(
-              "New epoch event out of sync> lastEventID: $lastEventID ; event: $event");
+            "New epoch event out of sync> lastEventID: $lastEventID ; event: $event",
+          );
           return false;
         }
       }
@@ -685,7 +713,8 @@ class AsyncEventChannel with WithLastEventID {
       // Events already in future from previousID:
       else if (lastEpoch > previousID.epoch) {
         _logChannel.warning(
-            "New epoch event out of sync> lastEventID: $lastEventID ; event: $event ; previousID: $previousID");
+          "New epoch event out of sync> lastEventID: $lastEventID ; event: $event ; previousID: $previousID",
+        );
         return false;
       }
       // Out of order:
@@ -699,8 +728,9 @@ class AsyncEventChannel with WithLastEventID {
   }
 
   void _optimize() {
-    var groupsByLastIDs =
-        _subscriptionsGroups.groupListsBy((e) => e.lastEventID);
+    var groupsByLastIDs = _subscriptionsGroups.groupListsBy(
+      (e) => e.lastEventID,
+    );
 
     for (var l in groupsByLastIDs.values) {
       if (l.length <= 1) continue;
@@ -777,13 +807,14 @@ class AsyncEventPullingConfig {
   /// The minimal interval for consecutive [pull]s.
   final Duration minInterval;
 
-  AsyncEventPullingConfig(
-      {this.period = const Duration(seconds: 10), Duration? minInterval})
-      : minInterval = _min(
-            period,
-            minInterval ??
-                Duration(
-                    milliseconds: math.max(period.inMilliseconds ~/ 10, 1))) {
+  AsyncEventPullingConfig({
+    this.period = const Duration(seconds: 10),
+    Duration? minInterval,
+  }) : minInterval = _min(
+         period,
+         minInterval ??
+             Duration(milliseconds: math.max(period.inMilliseconds ~/ 10, 1)),
+       ) {
     if (period.inMilliseconds < 10) {
       throw ArgumentError("period < 10ms");
     }
@@ -804,13 +835,14 @@ class AsyncEventPullingConfig {
 
   factory AsyncEventPullingConfig.fromJson(Map<String, dynamic> json) =>
       AsyncEventPullingConfig(
-          period: Duration(milliseconds: json['period']),
-          minInterval: Duration(milliseconds: json['minInterval']));
+        period: Duration(milliseconds: json['period']),
+        minInterval: Duration(milliseconds: json['minInterval']),
+      );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'period': period.inMilliseconds,
-        'minInterval': minInterval.inMilliseconds,
-      };
+    'period': period.inMilliseconds,
+    'minInterval': minInterval.inMilliseconds,
+  };
 
   @override
   String toString() {
@@ -832,10 +864,14 @@ class AsyncEventPulling {
   /// The minimal interval for consecutive [pull]s.
   Duration get minInterval => config.minInterval;
 
-  AsyncEventPulling(this.channel,
-      {Duration period = const Duration(seconds: 10), Duration? minInterval})
-      : config =
-            AsyncEventPullingConfig(period: period, minInterval: minInterval);
+  AsyncEventPulling(
+    this.channel, {
+    Duration period = const Duration(seconds: 10),
+    Duration? minInterval,
+  }) : config = AsyncEventPullingConfig(
+         period: period,
+         minInterval: minInterval,
+       );
 
   AsyncEventPulling.fromConfig(this.channel, this.config);
 
@@ -911,11 +947,17 @@ class AsyncEventPulling {
       _pulling = pullAsync;
 
       if (pullAsync is Future<int>) {
-        return pullAsync.then(_onPull, onError: (e, s) {
-          _logAsyncEventPulling.severe(
-              "Error pulling> channel: $channel", e, s);
-          return _onPull(0);
-        });
+        return pullAsync.then(
+          _onPull,
+          onError: (e, s) {
+            _logAsyncEventPulling.severe(
+              "Error pulling> channel: $channel",
+              e,
+              s,
+            );
+            return _onPull(0);
+          },
+        );
       } else {
         return _onPull(pullAsync);
       }
@@ -1010,10 +1052,12 @@ class AsyncEventPulling {
       case 3:
         {
           return _min(
-              Duration(
-                  milliseconds: minInterval.inMilliseconds *
-                      _consecutiveEmptyEventsCount),
-              period);
+            Duration(
+              milliseconds:
+                  minInterval.inMilliseconds * _consecutiveEmptyEventsCount,
+            ),
+            period,
+          );
         }
       default:
         {
@@ -1042,9 +1086,11 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
   /// If provided, will receive events starting [fromID].
   final AsyncEventID? fromID;
 
-  AsyncEventSubscriptionGroup(this.channel,
-      {this.fromID, Iterable<AsyncEventSubscription>? subscriptions})
-      : _subscriptions = subscriptions?.toList() ?? <AsyncEventSubscription>[];
+  AsyncEventSubscriptionGroup(
+    this.channel, {
+    this.fromID,
+    Iterable<AsyncEventSubscription>? subscriptions,
+  }) : _subscriptions = subscriptions?.toList() ?? <AsyncEventSubscription>[];
 
   /// Returns the size this group [subscriptions].
   int get subscriptionsSize => _subscriptions.length;
@@ -1072,8 +1118,10 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
     return unflushedEvents != null && unflushedEvents.isNotEmpty;
   }
 
-  void _addToUnflushedEvents(
-      {AsyncEvent? event, Iterable<AsyncEvent>? events}) {
+  void _addToUnflushedEvents({
+    AsyncEvent? event,
+    Iterable<AsyncEvent>? events,
+  }) {
     var unflushedEvents = _unflushedEvents ??= <AsyncEvent>[];
 
     var changed = false;
@@ -1084,8 +1132,9 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
     }
 
     if (events != null) {
-      var newEvents =
-          events.where((e) => !unflushedEvents.contains(e)).toList();
+      var newEvents = events
+          .where((e) => !unflushedEvents.contains(e))
+          .toList();
 
       unflushedEvents.addAll(newEvents);
       changed = true;
@@ -1123,24 +1172,28 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
 
     AsyncEvent? prev;
 
-    var asyncLoop =
-        AsyncLoop<int>(0, (i) => i < unflushedEvents.length, (i) => i + 1, (i) {
-      var e = unflushedEvents[i];
-      if (prev?.id == e.id) {
-        return true;
-      }
-
-      return _processEventImpl(e).resolveMapped((ok) {
-        if (ok == 1 || ok == 0) {
-          prev = e;
+    var asyncLoop = AsyncLoop<int>(
+      0,
+      (i) => i < unflushedEvents.length,
+      (i) => i + 1,
+      (i) {
+        var e = unflushedEvents[i];
+        if (prev?.id == e.id) {
           return true;
-        } else if (ok == -1) {
-          return false;
-        } else {
-          throw StateError("Unknown return status: $ok");
         }
-      });
-    });
+
+        return _processEventImpl(e).resolveMapped((ok) {
+          if (ok == 1 || ok == 0) {
+            prev = e;
+            return true;
+          } else if (ok == -1) {
+            return false;
+          } else {
+            throw StateError("Unknown return status: $ok");
+          }
+        });
+      },
+    );
 
     return asyncLoop.run().resolveMapped((i) {
       if (i < unflushedEvents.length) {
@@ -1203,11 +1256,13 @@ class AsyncEventSubscriptionGroup with WithLastEventID {
       }
     }
 
-    var resultsAsync =
-        _subscriptions.map((e) => e._processEvent(event)).resolveAll();
+    var resultsAsync = _subscriptions
+        .map((e) => e._processEvent(event))
+        .resolveAll();
 
-    return resultsAsync
-        .resolveMapped((results) => results.every((e) => e) ? 1 : -1);
+    return resultsAsync.resolveMapped(
+      (results) => results.every((e) => e) ? 1 : -1,
+    );
   }
 
   bool _sync = false;
@@ -1335,12 +1390,14 @@ class AsyncEventSubscription {
       group.isSubscribed(this) && channel.isSubscribedGroup(group);
 
   FutureOr<bool> _processEvent(AsyncEvent event) {
-    return asyncTry<Object?>(() => listener(event),
-        then: (_) => true,
-        onError: (e, s) {
-          _log.severe("$channel Error processing event: $event", e, s);
-          return false;
-        }).resolveMapped((val) => val is bool ? val : false);
+    return asyncTry<Object?>(
+      () => listener(event),
+      then: (_) => true,
+      onError: (e, s) {
+        _log.severe("$channel Error processing event: $event", e, s);
+        return false;
+      },
+    ).resolveMapped((val) => val is bool ? val : false);
   }
 
   /// Ensures that this subscription is synchronized with the channel.

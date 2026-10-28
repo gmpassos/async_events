@@ -18,15 +18,24 @@ mixin AsyncCaller {
   List<AsyncCall> get calls => UnmodifiableListView<AsyncCall>(_calling);
 
   /// Performs an async call with retry support.
-  FutureOr<R> call<R>(FutureOr<R> Function() call,
-      {R? errorValue,
-      bool nullErrorValue = false,
-      String? errorMessage,
-      String? methodName,
-      int maxRetries = 0,
-      Duration? retryInterval}) {
-    var asyncCall = AsyncCall(methodName, call, errorValue, nullErrorValue,
-        errorMessage, maxRetries, retryInterval ?? this.retryInterval);
+  FutureOr<R> call<R>(
+    FutureOr<R> Function() call, {
+    R? errorValue,
+    bool nullErrorValue = false,
+    String? errorMessage,
+    String? methodName,
+    int maxRetries = 0,
+    Duration? retryInterval,
+  }) {
+    var asyncCall = AsyncCall(
+      methodName,
+      call,
+      errorValue,
+      nullErrorValue,
+      errorMessage,
+      maxRetries,
+      retryInterval ?? this.retryInterval,
+    );
 
     _calling.add(asyncCall);
 
@@ -56,7 +65,10 @@ mixin AsyncCaller {
   }
 
   Future<R> _callRetry<R>(
-      AsyncCall<R> asyncCall, Object error, StackTrace stackTrace) async {
+    AsyncCall<R> asyncCall,
+    Object error,
+    StackTrace stackTrace,
+  ) async {
     asyncCall.error = error;
     asyncCall.stackTrace = stackTrace;
 
@@ -65,7 +77,8 @@ mixin AsyncCaller {
     }
 
     _logAsyncCall.warning(
-        "Error calling method `${asyncCall.methodName}`. Retrying (${asyncCall.maxRetries}) call. Error: $error");
+      "Error calling method `${asyncCall.methodName}`. Retrying (${asyncCall.maxRetries}) call. Error: $error",
+    );
 
     final retryIntervalMs = asyncCall.retryInterval.inMilliseconds;
     final maxRetries = asyncCall.maxRetries;
@@ -97,13 +110,17 @@ mixin AsyncCaller {
     return _callReturn(asyncCall, withError: true);
   }
 
-  R _callReturn<R>(AsyncCall<R> asyncCall,
-      {bool withError = false, R? returnValue}) {
+  R _callReturn<R>(
+    AsyncCall<R> asyncCall, {
+    bool withError = false,
+    R? returnValue,
+  }) {
     _calling.remove(asyncCall);
 
     if (asyncCall.isCanceled) {
-      asyncCall.error ??=
-          StateError("Call to `${asyncCall.methodName}` canceled!");
+      asyncCall.error ??= StateError(
+        "Call to `${asyncCall.methodName}` canceled!",
+      );
       withError = true;
     }
 
@@ -124,8 +141,10 @@ mixin AsyncCaller {
 
       stackTrace ??= StackTrace.current;
 
-      var eventError =
-          AsyncEventError.from(asyncCall.errorMessage, asyncCall.error);
+      var eventError = AsyncEventError.from(
+        asyncCall.errorMessage,
+        asyncCall.error,
+      );
 
       Error.throwWithStackTrace(eventError, stackTrace);
     } else {
@@ -133,7 +152,7 @@ mixin AsyncCaller {
     }
   }
 
-  int _calcInterval(final int i, final int retryIntervalMs) {
+  int _calcInterval(int i, int retryIntervalMs) {
     int intervalMs;
     if (i == 0) {
       intervalMs = retryIntervalMs ~/ 2;
@@ -167,12 +186,18 @@ class AsyncCall<R> {
   Object? error;
   StackTrace? stackTrace;
 
-  AsyncCall(this._methodName, this.call, this.errorValue, this.nullErrorValue,
-      this._errorMessage, int maxRetries, Duration retryInterval)
-      : maxRetries = maxRetries < 0 ? 0 : maxRetries,
-        retryInterval = retryInterval.inMilliseconds < 1
-            ? const Duration(milliseconds: 1)
-            : retryInterval;
+  AsyncCall(
+    this._methodName,
+    this.call,
+    this.errorValue,
+    this.nullErrorValue,
+    this._errorMessage,
+    int maxRetries,
+    Duration retryInterval,
+  ) : maxRetries = maxRetries < 0 ? 0 : maxRetries,
+      retryInterval = retryInterval.inMilliseconds < 1
+          ? const Duration(milliseconds: 1)
+          : retryInterval;
 
   String? get errorMessage =>
       _errorMessage ??

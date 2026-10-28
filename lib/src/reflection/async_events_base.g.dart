@@ -67,7 +67,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   AsyncEvent$reflection._([AsyncEvent? object])
-      : super(AsyncEvent, r'AsyncEvent', object);
+    : super(AsyncEvent, r'AsyncEvent', object);
 
   static bool _registered = false;
   @override
@@ -80,7 +80,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   @override
-  Version get languageVersion => Version.parse('3.6.0');
+  Version get languageVersion => Version.parse('3.13.0');
 
   @override
   AsyncEvent$reflection withObject([AsyncEvent? obj]) =>
@@ -144,40 +144,45 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
     switch (lc) {
       case '':
         return ConstructorReflection<AsyncEvent>(
-            this,
-            AsyncEvent,
-            '',
-            () => AsyncEvent.new,
-            const <__PR>[
-              __PR(__TR.tString, 'channelName', false, true),
-              __PR(__TR.tObject, 'id', false, true),
-              __PR(__TR<DateTime>(DateTime), 'time', false, true),
-              __PR(__TR.tString, 'type', false, true),
-              __PR(__TR.tMapStringDynamic, 'payload', false, true)
-            ],
-            null,
-            null,
-            null,
-            invoker: (a) => AsyncEvent(
-                a[0] as String,
-                a[1] as Object,
-                a[2] as DateTime,
-                a[3] as String,
-                a[4] as Map<String, dynamic>));
+          this,
+          AsyncEvent,
+          '',
+          () => AsyncEvent.new,
+          const <__PR>[
+            __PR(__TR.tString, 'channelName', false, true),
+            __PR(__TR.tObject, 'id', false, true),
+            __PR(__TR<DateTime>(DateTime), 'time', false, true),
+            __PR(__TR.tString, 'type', false, true),
+            __PR(__TR.tMapStringDynamic, 'payload', false, true),
+          ],
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEvent(
+            a[0] as String,
+            a[1] as Object,
+            a[2] as DateTime,
+            a[3] as String,
+            a[4] as Map<String, dynamic>,
+          ),
+        );
       case 'fromjson':
         return ConstructorReflection<AsyncEvent>(
-            this,
-            AsyncEvent,
-            'fromJson',
-            () => AsyncEvent.fromJson,
-            const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
-            null,
-            const <String, __PR>{
-              'channelName': __PR(__TR.tString, 'channelName', true, false)
-            },
-            null,
-            invoker: (a) => AsyncEvent.fromJson(a[0] as Map<String, dynamic>,
-                channelName: __argOr$<String?>(a[1], null)));
+          this,
+          AsyncEvent,
+          'fromJson',
+          () => AsyncEvent.fromJson,
+          const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
+          null,
+          const <String, __PR>{
+            'channelName': __PR(__TR.tString, 'channelName', true, false),
+          },
+          null,
+          invoker: (a) => AsyncEvent.fromJson(
+            a[0] as Map<String, dynamic>,
+            channelName: __argOr$<String?>(a[1], null),
+          ),
+        );
       default:
         return null;
     }
@@ -208,20 +213,22 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
     'id',
     'payload',
     'time',
-    'type'
+    'type',
   ];
 
   @override
   List<String> get fieldsNames => _fieldsNames;
 
   static final Map<String, FieldReflection<AsyncEvent, dynamic>>
-      _fieldsNoObject = {};
+  _fieldsNoObject = {};
 
   final Map<String, FieldReflection<AsyncEvent, dynamic>> _fieldsObject = {};
 
   @override
-  FieldReflection<AsyncEvent, T>? field<T>(String fieldName,
-      [AsyncEvent? obj]) {
+  FieldReflection<AsyncEvent, T>? field<T>(
+    String fieldName, [
+    AsyncEvent? obj,
+  ]) {
     if (obj == null) {
       if (object != null) {
         return _fieldObjectImpl<T>(fieldName);
@@ -258,7 +265,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   FieldReflection<AsyncEvent, dynamic>? _fieldImpl(
-      String fieldName, AsyncEvent? obj) {
+    String fieldName,
+    AsyncEvent? obj,
+  ) {
     obj ??= object;
 
     var lc = fieldName.trim().toLowerCase();
@@ -271,7 +280,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           __TR.tString,
           'channelName',
           false,
-          (o) => () => o!.channelName,
+          (o) =>
+              () => o!.channelName,
           null,
           obj,
           true,
@@ -284,7 +294,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           const __TR<AsyncEventID>(AsyncEventID),
           'id',
           false,
-          (o) => () => o!.id,
+          (o) =>
+              () => o!.id,
           null,
           obj,
           true,
@@ -296,7 +307,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           const __TR<DateTime>(DateTime),
           'time',
           false,
-          (o) => () => o!.time,
+          (o) =>
+              () => o!.time,
           null,
           obj,
           true,
@@ -308,7 +320,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           __TR.tString,
           'type',
           false,
-          (o) => () => o!.type,
+          (o) =>
+              () => o!.type,
           null,
           obj,
           true,
@@ -320,7 +333,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           __TR.tMapStringDynamic,
           'payload',
           false,
-          (o) => () => o!.payload,
+          (o) =>
+              () => o!.payload,
           null,
           obj,
           true,
@@ -332,7 +346,8 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
           __TR.tInt,
           'hashCode',
           false,
-          (o) => () => o!.hashCode,
+          (o) =>
+              () => o!.hashCode,
           null,
           obj,
           false,
@@ -344,8 +359,10 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   @override
-  Map<String, dynamic> getFieldsValues(AsyncEvent? obj,
-      {bool withHashCode = false}) {
+  Map<String, dynamic> getFieldsValues(
+    AsyncEvent? obj, {
+    bool withHashCode = false,
+  }) {
     obj ??= object;
     return <String, dynamic>{
       'channelName': obj?.channelName,
@@ -369,20 +386,22 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   static const List<String> _methodsNames = const <String>[
     'compareTo',
     'toJson',
-    'toString'
+    'toString',
   ];
 
   @override
   List<String> get methodsNames => _methodsNames;
 
   static final Map<String, MethodReflection<AsyncEvent, dynamic>>
-      _methodsNoObject = {};
+  _methodsNoObject = {};
 
   final Map<String, MethodReflection<AsyncEvent, dynamic>> _methodsObject = {};
 
   @override
-  MethodReflection<AsyncEvent, R>? method<R>(String methodName,
-      [AsyncEvent? obj]) {
+  MethodReflection<AsyncEvent, R>? method<R>(
+    String methodName, [
+    AsyncEvent? obj,
+  ]) {
     if (obj == null) {
       if (object != null) {
         return _methodObjectImpl<R>(methodName);
@@ -419,7 +438,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   MethodReflection<AsyncEvent, dynamic>? _methodImpl(
-      String methodName, AsyncEvent? obj) {
+    String methodName,
+    AsyncEvent? obj,
+  ) {
     obj ??= object;
 
     var lc = methodName.trim().toLowerCase();
@@ -427,48 +448,56 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
     switch (lc) {
       case 'compareto':
         return MethodReflection<AsyncEvent, int>(
-            this,
-            AsyncEvent,
-            'compareTo',
-            __TR.tInt,
-            false,
-            (o) => o!.compareTo,
-            obj,
-            const <__PR>[
-              __PR(__TR<AsyncEvent>(AsyncEvent), 'other', false, true)
-            ],
-            null,
-            null,
-            const [override]);
+          this,
+          AsyncEvent,
+          'compareTo',
+          __TR.tInt,
+          false,
+          (o) => o!.compareTo,
+          obj,
+          const <__PR>[
+            __PR(__TR<AsyncEvent>(AsyncEvent), 'other', false, true),
+          ],
+          null,
+          null,
+          const [override],
+        );
       case 'tojson':
         return MethodReflection<AsyncEvent, Map<String, dynamic>>(
-            this,
-            AsyncEvent,
-            'toJson',
-            __TR.tMapStringDynamic,
-            false,
-            (o) => o!.toJson,
-            obj,
-            null,
-            null,
-            const <String, __PR>{
-              'withChannelName':
-                  __PR(__TR.tBool, 'withChannelName', false, false, true)
-            },
-            null);
+          this,
+          AsyncEvent,
+          'toJson',
+          __TR.tMapStringDynamic,
+          false,
+          (o) => o!.toJson,
+          obj,
+          null,
+          null,
+          const <String, __PR>{
+            'withChannelName': __PR(
+              __TR.tBool,
+              'withChannelName',
+              false,
+              false,
+              true,
+            ),
+          },
+          null,
+        );
       case 'tostring':
         return MethodReflection<AsyncEvent, String>(
-            this,
-            AsyncEvent,
-            'toString',
-            __TR.tString,
-            false,
-            (o) => o!.toString,
-            obj,
-            null,
-            null,
-            null,
-            const [override]);
+          this,
+          AsyncEvent,
+          'toString',
+          __TR.tString,
+          false,
+          (o) => o!.toString,
+          obj,
+          null,
+          null,
+          null,
+          const [override],
+        );
       default:
         return null;
     }
@@ -480,7 +509,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   List<String> get staticMethodsNames => _staticMethodsNames;
 
   static final Map<String, StaticMethodReflection<AsyncEvent, dynamic>>
-      _staticMethods = {};
+  _staticMethods = {};
 
   @override
   StaticMethodReflection<AsyncEvent, R>? staticMethod<R>(String methodName) {
@@ -495,22 +524,24 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
   }
 
   StaticMethodReflection<AsyncEvent, dynamic>? _staticMethodImpl(
-      String methodName) {
+    String methodName,
+  ) {
     var lc = methodName.trim().toLowerCase();
 
     switch (lc) {
       case 'boot':
         return StaticMethodReflection<AsyncEvent, void>(
-            this,
-            AsyncEvent,
-            'boot',
-            __TR.tVoid,
-            false,
-            () => AsyncEvent.boot,
-            null,
-            null,
-            null,
-            null);
+          this,
+          AsyncEvent,
+          'boot',
+          __TR.tVoid,
+          false,
+          () => AsyncEvent.boot,
+          null,
+          null,
+          null,
+          null,
+        );
       default:
         return null;
     }
@@ -527,7 +558,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   AsyncEventID$reflection._([AsyncEventID? object])
-      : super(AsyncEventID, r'AsyncEventID', object);
+    : super(AsyncEventID, r'AsyncEventID', object);
 
   static bool _registered = false;
   @override
@@ -540,7 +571,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   @override
-  Version get languageVersion => Version.parse('3.6.0');
+  Version get languageVersion => Version.parse('3.13.0');
 
   @override
   AsyncEventID$reflection withObject([AsyncEventID? obj]) =>
@@ -587,7 +618,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
     'from',
     'fromJson',
     'parse',
-    'zero'
+    'zero',
   ];
 
   @override
@@ -607,66 +638,86 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   ConstructorReflection<AsyncEventID>? _constructorImpl(
-      String constructorName) {
+    String constructorName,
+  ) {
     var lc = constructorName.trim().toLowerCase();
 
     switch (lc) {
       case '':
         return ConstructorReflection<AsyncEventID>(
-            this,
-            AsyncEventID,
-            '',
-            () => AsyncEventID.new,
-            const <__PR>[
-              __PR(__TR.tInt, 'epoch', false, true),
-              __PR(__TR.tInt, 'serial', false, true)
-            ],
-            null,
-            null,
-            null,
-            invoker: (a) => AsyncEventID(a[0] as int, a[1] as int));
+          this,
+          AsyncEventID,
+          '',
+          () => AsyncEventID.new,
+          const <__PR>[
+            __PR(__TR.tInt, 'epoch', false, true),
+            __PR(__TR.tInt, 'serial', false, true),
+          ],
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID(a[0] as int, a[1] as int),
+        );
       case 'zero':
-        return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'zero',
-            () => AsyncEventID.zero, null, null, null, null,
-            invoker: (a) => AsyncEventID.zero());
+        return ConstructorReflection<AsyncEventID>(
+          this,
+          AsyncEventID,
+          'zero',
+          () => AsyncEventID.zero,
+          null,
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID.zero(),
+        );
       case 'any':
-        return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'any',
-            () => AsyncEventID.any, null, null, null, null,
-            invoker: (a) => AsyncEventID.any());
+        return ConstructorReflection<AsyncEventID>(
+          this,
+          AsyncEventID,
+          'any',
+          () => AsyncEventID.any,
+          null,
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID.any(),
+        );
       case 'from':
         return ConstructorReflection<AsyncEventID>(
-            this,
-            AsyncEventID,
-            'from',
-            () => AsyncEventID.from,
-            const <__PR>[__PR(__TR.tObject, 'o', false, true)],
-            null,
-            null,
-            null,
-            invoker: (a) => AsyncEventID.from(a[0] as Object));
+          this,
+          AsyncEventID,
+          'from',
+          () => AsyncEventID.from,
+          const <__PR>[__PR(__TR.tObject, 'o', false, true)],
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID.from(a[0] as Object),
+        );
       case 'fromjson':
         return ConstructorReflection<AsyncEventID>(
-            this,
-            AsyncEventID,
-            'fromJson',
-            () => AsyncEventID.fromJson,
-            const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
-            null,
-            null,
-            null,
-            invoker: (a) =>
-                AsyncEventID.fromJson(a[0] as Map<String, dynamic>));
+          this,
+          AsyncEventID,
+          'fromJson',
+          () => AsyncEventID.fromJson,
+          const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID.fromJson(a[0] as Map<String, dynamic>),
+        );
       case 'parse':
         return ConstructorReflection<AsyncEventID>(
-            this,
-            AsyncEventID,
-            'parse',
-            () => AsyncEventID.parse,
-            const <__PR>[__PR(__TR.tString, 's', false, true)],
-            null,
-            null,
-            null,
-            invoker: (a) => AsyncEventID.parse(a[0] as String));
+          this,
+          AsyncEventID,
+          'parse',
+          () => AsyncEventID.parse,
+          const <__PR>[__PR(__TR.tString, 's', false, true)],
+          null,
+          null,
+          null,
+          invoker: (a) => AsyncEventID.parse(a[0] as String),
+        );
       default:
         return null;
     }
@@ -696,20 +747,22 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
     'hashCode',
     'next',
     'previous',
-    'serial'
+    'serial',
   ];
 
   @override
   List<String> get fieldsNames => _fieldsNames;
 
   static final Map<String, FieldReflection<AsyncEventID, dynamic>>
-      _fieldsNoObject = {};
+  _fieldsNoObject = {};
 
   final Map<String, FieldReflection<AsyncEventID, dynamic>> _fieldsObject = {};
 
   @override
-  FieldReflection<AsyncEventID, T>? field<T>(String fieldName,
-      [AsyncEventID? obj]) {
+  FieldReflection<AsyncEventID, T>? field<T>(
+    String fieldName, [
+    AsyncEventID? obj,
+  ]) {
     if (obj == null) {
       if (object != null) {
         return _fieldObjectImpl<T>(fieldName);
@@ -746,7 +799,9 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   FieldReflection<AsyncEventID, dynamic>? _fieldImpl(
-      String fieldName, AsyncEventID? obj) {
+    String fieldName,
+    AsyncEventID? obj,
+  ) {
     obj ??= object;
 
     var lc = fieldName.trim().toLowerCase();
@@ -759,7 +814,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           __TR.tInt,
           'epoch',
           false,
-          (o) => () => o!.epoch,
+          (o) =>
+              () => o!.epoch,
           null,
           obj,
           true,
@@ -771,7 +827,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           __TR.tInt,
           'serial',
           false,
-          (o) => () => o!.serial,
+          (o) =>
+              () => o!.serial,
           null,
           obj,
           true,
@@ -783,7 +840,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           const __TR<AsyncEventID>(AsyncEventID),
           'previous',
           true,
-          (o) => () => o!.previous,
+          (o) =>
+              () => o!.previous,
           null,
           obj,
           false,
@@ -795,7 +853,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           const __TR<AsyncEventID>(AsyncEventID),
           'next',
           true,
-          (o) => () => o!.next,
+          (o) =>
+              () => o!.next,
           null,
           obj,
           false,
@@ -807,7 +866,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
           __TR.tInt,
           'hashCode',
           false,
-          (o) => () => o!.hashCode,
+          (o) =>
+              () => o!.hashCode,
           null,
           obj,
           false,
@@ -819,8 +879,10 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   @override
-  Map<String, dynamic> getFieldsValues(AsyncEventID? obj,
-      {bool withHashCode = false}) {
+  Map<String, dynamic> getFieldsValues(
+    AsyncEventID? obj, {
+    bool withHashCode = false,
+  }) {
     obj ??= object;
     return <String, dynamic>{
       'epoch': obj?.epoch,
@@ -843,21 +905,23 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   static const List<String> _methodsNames = const <String>[
     'compareTo',
     'toJson',
-    'toString'
+    'toString',
   ];
 
   @override
   List<String> get methodsNames => _methodsNames;
 
   static final Map<String, MethodReflection<AsyncEventID, dynamic>>
-      _methodsNoObject = {};
+  _methodsNoObject = {};
 
   final Map<String, MethodReflection<AsyncEventID, dynamic>> _methodsObject =
       {};
 
   @override
-  MethodReflection<AsyncEventID, R>? method<R>(String methodName,
-      [AsyncEventID? obj]) {
+  MethodReflection<AsyncEventID, R>? method<R>(
+    String methodName, [
+    AsyncEventID? obj,
+  ]) {
     if (obj == null) {
       if (object != null) {
         return _methodObjectImpl<R>(methodName);
@@ -894,7 +958,9 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   MethodReflection<AsyncEventID, dynamic>? _methodImpl(
-      String methodName, AsyncEventID? obj) {
+    String methodName,
+    AsyncEventID? obj,
+  ) {
     obj ??= object;
 
     var lc = methodName.trim().toLowerCase();
@@ -902,45 +968,48 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
     switch (lc) {
       case 'compareto':
         return MethodReflection<AsyncEventID, int>(
-            this,
-            AsyncEventID,
-            'compareTo',
-            __TR.tInt,
-            false,
-            (o) => o!.compareTo,
-            obj,
-            const <__PR>[
-              __PR(__TR<AsyncEventID>(AsyncEventID), 'other', false, true)
-            ],
-            null,
-            null,
-            const [override]);
+          this,
+          AsyncEventID,
+          'compareTo',
+          __TR.tInt,
+          false,
+          (o) => o!.compareTo,
+          obj,
+          const <__PR>[
+            __PR(__TR<AsyncEventID>(AsyncEventID), 'other', false, true),
+          ],
+          null,
+          null,
+          const [override],
+        );
       case 'tojson':
         return MethodReflection<AsyncEventID, Map<String, dynamic>>(
-            this,
-            AsyncEventID,
-            'toJson',
-            __TR.tMapStringDynamic,
-            false,
-            (o) => o!.toJson,
-            obj,
-            null,
-            null,
-            null,
-            null);
+          this,
+          AsyncEventID,
+          'toJson',
+          __TR.tMapStringDynamic,
+          false,
+          (o) => o!.toJson,
+          obj,
+          null,
+          null,
+          null,
+          null,
+        );
       case 'tostring':
         return MethodReflection<AsyncEventID, String>(
-            this,
-            AsyncEventID,
-            'toString',
-            __TR.tString,
-            false,
-            (o) => o!.toString,
-            obj,
-            null,
-            null,
-            null,
-            const [override]);
+          this,
+          AsyncEventID,
+          'toString',
+          __TR.tString,
+          false,
+          (o) => o!.toString,
+          obj,
+          null,
+          null,
+          null,
+          const [override],
+        );
       default:
         return null;
     }
@@ -948,14 +1017,14 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
 
   static const List<String> _staticMethodsNames = const <String>[
     'boot',
-    'tryParse'
+    'tryParse',
   ];
 
   @override
   List<String> get staticMethodsNames => _staticMethodsNames;
 
   static final Map<String, StaticMethodReflection<AsyncEventID, dynamic>>
-      _staticMethods = {};
+  _staticMethods = {};
 
   @override
   StaticMethodReflection<AsyncEventID, R>? staticMethod<R>(String methodName) {
@@ -970,34 +1039,37 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
   }
 
   StaticMethodReflection<AsyncEventID, dynamic>? _staticMethodImpl(
-      String methodName) {
+    String methodName,
+  ) {
     var lc = methodName.trim().toLowerCase();
 
     switch (lc) {
       case 'boot':
         return StaticMethodReflection<AsyncEventID, void>(
-            this,
-            AsyncEventID,
-            'boot',
-            __TR.tVoid,
-            false,
-            () => AsyncEventID.boot,
-            null,
-            null,
-            null,
-            null);
+          this,
+          AsyncEventID,
+          'boot',
+          __TR.tVoid,
+          false,
+          () => AsyncEventID.boot,
+          null,
+          null,
+          null,
+          null,
+        );
       case 'tryparse':
         return StaticMethodReflection<AsyncEventID, AsyncEventID?>(
-            this,
-            AsyncEventID,
-            'tryParse',
-            const __TR<AsyncEventID>(AsyncEventID),
-            true,
-            () => AsyncEventID.tryParse,
-            const <__PR>[__PR(__TR.tString, 's', true, true)],
-            null,
-            null,
-            null);
+          this,
+          AsyncEventID,
+          'tryParse',
+          const __TR<AsyncEventID>(AsyncEventID),
+          true,
+          () => AsyncEventID.tryParse,
+          const <__PR>[__PR(__TR.tString, 's', true, true)],
+          null,
+          null,
+          null,
+        );
       default:
         return null;
     }
@@ -1013,10 +1085,13 @@ extension AsyncEvent$reflectionExtension on AsyncEvent {
       reflection.toJsonMap(duplicatedEntitiesAsID: duplicatedEntitiesAsID);
 
   /// Returns an encoded JSON [String] for type [AsyncEvent]. (Generated by [ReflectionFactory])
-  String toJsonEncoded(
-          {bool pretty = false, bool duplicatedEntitiesAsID = false}) =>
-      reflection.toJsonEncoded(
-          pretty: pretty, duplicatedEntitiesAsID: duplicatedEntitiesAsID);
+  String toJsonEncoded({
+    bool pretty = false,
+    bool duplicatedEntitiesAsID = false,
+  }) => reflection.toJsonEncoded(
+    pretty: pretty,
+    duplicatedEntitiesAsID: duplicatedEntitiesAsID,
+  );
 
   /// Returns a JSON for type [AsyncEvent] using the class fields. (Generated by [ReflectionFactory])
   Object? toJsonFromFields({bool duplicatedEntitiesAsID = false}) => reflection
@@ -1032,10 +1107,13 @@ extension AsyncEventID$reflectionExtension on AsyncEventID {
       reflection.toJsonMap(duplicatedEntitiesAsID: duplicatedEntitiesAsID);
 
   /// Returns an encoded JSON [String] for type [AsyncEventID]. (Generated by [ReflectionFactory])
-  String toJsonEncoded(
-          {bool pretty = false, bool duplicatedEntitiesAsID = false}) =>
-      reflection.toJsonEncoded(
-          pretty: pretty, duplicatedEntitiesAsID: duplicatedEntitiesAsID);
+  String toJsonEncoded({
+    bool pretty = false,
+    bool duplicatedEntitiesAsID = false,
+  }) => reflection.toJsonEncoded(
+    pretty: pretty,
+    duplicatedEntitiesAsID: duplicatedEntitiesAsID,
+  );
 
   /// Returns a JSON for type [AsyncEventID] using the class fields. (Generated by [ReflectionFactory])
   Object? toJsonFromFields({bool duplicatedEntitiesAsID = false}) => reflection
@@ -1043,9 +1121,9 @@ extension AsyncEventID$reflectionExtension on AsyncEventID {
 }
 
 List<Reflection> _listSiblingsReflection() => <Reflection>[
-      AsyncEvent$reflection(),
-      AsyncEventID$reflection(),
-    ];
+  AsyncEvent$reflection(),
+  AsyncEventID$reflection(),
+];
 
 List<Reflection>? _siblingsReflectionList;
 List<Reflection> _siblingsReflection() => _siblingsReflectionList ??=
