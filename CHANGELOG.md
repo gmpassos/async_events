@@ -15,6 +15,9 @@
     result), so a retried `lastID` / `last` of an empty channel failed.
   - The error reported, after the retries, is the last one (it was the
     first).
+  - A synchronous call canceled while running throws its cancel error (its
+    cause). The error was caught again as a failure of the call, and wrapped
+    by the retry, losing the cause.
 - sdk: '>=3.13.0 <4.0.0' (reflection_factory 2.13 requires it); the code
   formatted for it.
 - reflection_factory: ^2.13.0 (the reflection regenerated with it: it was

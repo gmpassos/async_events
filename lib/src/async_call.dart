@@ -39,28 +39,31 @@ mixin AsyncCaller {
 
     _calling.add(asyncCall);
 
+    // Only an error of [call] is retried: not the one of a canceled call
+    // (thrown by `_callReturn`), that would be wrapped again.
+    FutureOr<R> ret;
     try {
-      var ret = call();
-
-      if (asyncCall.isCanceled) {
-        return _callReturn(asyncCall, withError: true);
-      }
-
-      if (ret is Future<R>) {
-        return ret.then((r) {
-          if (asyncCall.isCanceled) {
-            return _callReturn(asyncCall, withError: true);
-          }
-
-          _calling.remove(asyncCall);
-          return r;
-        }, onError: (e, s) => _callRetry(asyncCall, e, s));
-      } else {
-        _calling.remove(asyncCall);
-        return ret;
-      }
+      ret = call();
     } catch (e, s) {
       return _callRetry(asyncCall, e, s);
+    }
+
+    if (asyncCall.isCanceled) {
+      return _callReturn(asyncCall, withError: true);
+    }
+
+    if (ret is Future<R>) {
+      return ret.then((r) {
+        if (asyncCall.isCanceled) {
+          return _callReturn(asyncCall, withError: true);
+        }
+
+        _calling.remove(asyncCall);
+        return r;
+      }, onError: (e, s) => _callRetry(asyncCall, e, s));
+    } else {
+      _calling.remove(asyncCall);
+      return ret;
     }
   }
 

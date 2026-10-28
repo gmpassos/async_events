@@ -93,6 +93,77 @@ void main() {
     expect(e1.toString(), contains('0#1'));
   });
 
+  test('events stored out of order: delivered in order', () async {
+    var storage = AsyncEventStorageMemory('ooo');
+    var hub = AsyncEventHub('ooo', storage);
+    var channel = hub.channel('c');
+
+    var received = <String>[];
+    await channel.subscribe(
+      (e) => received.add('${e.payload['n']}'),
+      fromBegin: true,
+    );
+
+    var now = DateTime.now();
+    AsyncEvent event(int serial) =>
+        AsyncEvent('c', AsyncEventID(0, serial), now, 't', {'n': serial});
+
+    // The epoch's first event (as `newEvent` stores it):
+    storage.store(
+      'c',
+      AsyncEvent('c', AsyncEventID(0, 0), now, 'new_epoch', {}),
+    );
+
+    // `0#2` before `0#1`: held until `0#1`.
+    storage.store('c', event(2));
+    await channel.pull();
+    expect(received, isEmpty);
+
+    storage.store('c', event(1));
+    await channel.pull();
+    expect(received, equals(['1', '2']));
+  });
+
+  test('AsyncEventPulling: a failing pull keeps pulling', () async {
+    var storage = _FailingPullStorage('fail-pull');
+    var hub = AsyncEventHub('fail-pull', storage);
+    var channel = hub.channel('c');
+
+    var pulling = AsyncEventPulling(
+      channel,
+      period: Duration(milliseconds: 100),
+    );
+
+    expect(await pulling.pull(), equals(0));
+    expect(pulling.isPulling, isFalse);
+
+    pulling.start();
+    await Future.delayed(Duration(milliseconds: 300));
+    expect(storage.pulls, greaterThan(1));
+    expect(pulling.isScheduled || pulling.isPulling, isTrue);
+    pulling.stop();
+    expect(pulling.toString(), contains('AsyncEventPulling'));
+  });
+
+  test('AsyncCaller: a synchronous call canceled while running', () {
+    var caller = _Caller();
+
+    expect(
+      () => caller.call<int>(() {
+        caller.calls.single.cancel();
+        return 1;
+      }, methodName: 'sync'),
+      throwsA(
+        isA<AsyncEventError>().having(
+          (e) => '${e.cause}',
+          'cause',
+          contains('canceled'),
+        ),
+      ),
+    );
+    expect(caller.calls, isEmpty);
+  });
+
   group('remote storage (integration)', () {
     late AsyncEventStorageMemory serverStorage;
     late _Server server;
@@ -269,6 +340,51 @@ class _Server with AsyncEventStorageAsJSON {
     _checkFail();
     return super.last(channelName).asFuture;
   }
+}
+
+class _Caller with AsyncCaller {}
+
+/// A storage whose `pull` always fails (asynchronously); no events.
+class _FailingPullStorage extends AsyncEventStorage {
+  _FailingPullStorage(super.name);
+
+  int pulls = 0;
+
+  @override
+  Future<int> pull(String channelName, AsyncEventID? fromID) async {
+    ++pulls;
+    throw StateError('Forced pull error');
+  }
+
+  @override
+  int get epoch => 0;
+
+  @override
+  bool store(String channelName, AsyncEvent event) => false;
+
+  @override
+  List<AsyncEvent> fetch(
+    String channelName,
+    AsyncEventID fromID, {
+    int? limit,
+  }) => [];
+
+  @override
+  AsyncEvent? last(String channelName) => null;
+
+  @override
+  int purgeEpochs(int untilEpoch) => 0;
+
+  @override
+  int purgeEvents(
+    String channelName, {
+    AsyncEventID? untilID,
+    DateTime? before,
+    bool all = false,
+  }) => 0;
+
+  @override
+  void cancelChannelCalls(String channelName) {}
 }
 
 class _Client extends AsyncEventStorageClient with AsyncEventStorageFromJSON {
