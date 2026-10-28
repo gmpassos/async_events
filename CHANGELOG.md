@@ -15,6 +15,8 @@
     result), so a retried `lastID` / `last` of an empty channel failed.
   - The error reported, after the retries, is the last one (it was the
     first).
+- reflection_factory: ^2.13.0 (the reflection regenerated with it: it was
+  generated with 2.5.1, so `ensure_build` failed).
 - CI: separate `build`, `test_vm` (with the coverage) and `test_chrome` jobs;
   the tests run once per platform. `actions/checkout@v7`,
   `codecov/codecov-action@v7`.

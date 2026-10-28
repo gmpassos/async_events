@@ -1,6 +1,6 @@
 //
 // GENERATED CODE - DO NOT MODIFY BY HAND!
-// BUILDER: reflection_factory/2.5.1
+// BUILDER: reflection_factory/2.13.0
 // BUILD COMMAND: dart run build_runner build
 //
 
@@ -21,8 +21,10 @@ typedef __TR<T> = TypeReflection<T>;
 typedef __TI<T> = TypeInfo<T>;
 typedef __PR = ParameterReflection;
 
+T __argOr$<T>(Object? a, T d) => ConstructorReflection.argOrDefault<T>(a, d);
+
 mixin __ReflectionMixin {
-  static final Version _version = Version.parse('2.5.1');
+  static final Version _version = Version.parse('2.13.0');
 
   Version get reflectionFactoryVersion => _version;
 
@@ -155,7 +157,13 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             ],
             null,
             null,
-            null);
+            null,
+            invoker: (a) => AsyncEvent(
+                a[0] as String,
+                a[1] as Object,
+                a[2] as DateTime,
+                a[3] as String,
+                a[4] as Map<String, dynamic>));
       case 'fromjson':
         return ConstructorReflection<AsyncEvent>(
             this,
@@ -167,7 +175,9 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
             const <String, __PR>{
               'channelName': __PR(__TR.tString, 'channelName', true, false)
             },
-            null);
+            null,
+            invoker: (a) => AsyncEvent.fromJson(a[0] as Map<String, dynamic>,
+                channelName: __argOr$<String?>(a[1], null)));
       default:
         return null;
     }
@@ -271,7 +281,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
         return FieldReflection<AsyncEvent, AsyncEventID>(
           this,
           AsyncEvent,
-          __TR<AsyncEventID>(AsyncEventID),
+          const __TR<AsyncEventID>(AsyncEventID),
           'id',
           false,
           (o) => () => o!.id,
@@ -283,7 +293,7 @@ class AsyncEvent$reflection extends ClassReflection<AsyncEvent>
         return FieldReflection<AsyncEvent, DateTime>(
           this,
           AsyncEvent,
-          __TR<DateTime>(DateTime),
+          const __TR<DateTime>(DateTime),
           'time',
           false,
           (o) => () => o!.time,
@@ -613,13 +623,16 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             ],
             null,
             null,
-            null);
+            null,
+            invoker: (a) => AsyncEventID(a[0] as int, a[1] as int));
       case 'zero':
         return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'zero',
-            () => AsyncEventID.zero, null, null, null, null);
+            () => AsyncEventID.zero, null, null, null, null,
+            invoker: (a) => AsyncEventID.zero());
       case 'any':
         return ConstructorReflection<AsyncEventID>(this, AsyncEventID, 'any',
-            () => AsyncEventID.any, null, null, null, null);
+            () => AsyncEventID.any, null, null, null, null,
+            invoker: (a) => AsyncEventID.any());
       case 'from':
         return ConstructorReflection<AsyncEventID>(
             this,
@@ -629,7 +642,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             const <__PR>[__PR(__TR.tObject, 'o', false, true)],
             null,
             null,
-            null);
+            null,
+            invoker: (a) => AsyncEventID.from(a[0] as Object));
       case 'fromjson':
         return ConstructorReflection<AsyncEventID>(
             this,
@@ -639,7 +653,9 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             const <__PR>[__PR(__TR.tMapStringDynamic, 'json', false, true)],
             null,
             null,
-            null);
+            null,
+            invoker: (a) =>
+                AsyncEventID.fromJson(a[0] as Map<String, dynamic>));
       case 'parse':
         return ConstructorReflection<AsyncEventID>(
             this,
@@ -649,7 +665,8 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             const <__PR>[__PR(__TR.tString, 's', false, true)],
             null,
             null,
-            null);
+            null,
+            invoker: (a) => AsyncEventID.parse(a[0] as String));
       default:
         return null;
     }
@@ -763,7 +780,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
         return FieldReflection<AsyncEventID, AsyncEventID?>(
           this,
           AsyncEventID,
-          __TR<AsyncEventID>(AsyncEventID),
+          const __TR<AsyncEventID>(AsyncEventID),
           'previous',
           true,
           (o) => () => o!.previous,
@@ -775,7 +792,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
         return FieldReflection<AsyncEventID, AsyncEventID?>(
           this,
           AsyncEventID,
-          __TR<AsyncEventID>(AsyncEventID),
+          const __TR<AsyncEventID>(AsyncEventID),
           'next',
           true,
           (o) => () => o!.next,
@@ -974,7 +991,7 @@ class AsyncEventID$reflection extends ClassReflection<AsyncEventID>
             this,
             AsyncEventID,
             'tryParse',
-            __TR<AsyncEventID>(AsyncEventID),
+            const __TR<AsyncEventID>(AsyncEventID),
             true,
             () => AsyncEventID.tryParse,
             const <__PR>[__PR(__TR.tString, 's', true, true)],
