@@ -1,4 +1,4 @@
-## 1.3.1
+## 1.4.0
 
 - `AsyncEventPulling.start`: restarts a pulling stopped while a pull was still
   scheduled (or running). `start` returned at once (`isStarted` was still
